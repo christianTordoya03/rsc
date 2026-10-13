@@ -1,0 +1,220 @@
+<div class="space-y-6 relative h-full">
+  <!-- Cabecera con Botones -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Ventas y Retornos</h1>
+      <p class="text-sm text-slate-500">Gestión de despachos diarios y mermas operativas</p>
+    </div>
+    
+    <div class="flex items-center gap-3 w-full sm:w-auto">
+      <button (click)="exportarExcel()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Exportar Excel
+      </button>
+
+      <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Registrar Ruta
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjetas KPI -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex justify-between items-center">
+      <div>
+        <p class="text-xs font-bold text-slate-500 uppercase">Cilindros Programados</p>
+        <p class="text-3xl font-black text-slate-800 mt-1">{{ kpiTotalProgramado }}</p>
+      </div>
+      <div class="p-3 bg-slate-100 rounded-lg text-slate-500">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 border border-indigo-100 shadow-sm flex justify-between items-center">
+      <div>
+        <p class="text-xs font-bold text-[#4F46E5] uppercase">Ventas Reales</p>
+        <p class="text-3xl font-black text-[#4F46E5] mt-1">{{ kpiTotalVenta }}</p>
+      </div>
+      <div class="p-3 bg-indigo-50 rounded-lg text-[#4F46E5]">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl p-5 border border-red-100 shadow-sm flex justify-between items-center">
+      <div>
+        <p class="text-xs font-bold text-red-500 uppercase">Retornos / Mermas</p>
+        <p class="text-3xl font-black text-red-600 mt-1">{{ kpiTotalRetorno }}</p>
+      </div>
+      <div class="p-3 bg-red-50 rounded-lg text-red-500">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout de Gráfico y Tabla -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-1">
+      <h3 class="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wide">Ventas vs Retornos (Global)</h3>
+      <div class="h-64 relative w-full">
+        <canvas #comparativaChart></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden lg:col-span-2 flex flex-col">
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+              <th class="p-4 font-semibold">Fecha / Placa</th>
+              <th class="p-4 font-semibold">Cliente / Distribuidor</th>
+              <th class="p-4 font-semibold text-center">Prog.</th>
+              <th class="p-4 font-semibold text-center text-blue-600">Venta</th>
+              <th class="p-4 font-semibold text-center text-red-500">Retorno</th>
+              <th class="p-4 font-semibold text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-sm">
+            <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
+              <td class="p-4">
+                <div class="font-bold text-[#4F46E5]">{{ reg.placa }}</div>
+                <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
+              </td>
+              <td class="p-4">
+                <div class="font-medium text-slate-800">{{ reg.cliente }}</div>
+                <div class="text-slate-500 text-xs truncate max-w-[150px]">{{ reg.distrito }}</div>
+              </td>
+              <td class="p-4 text-center font-medium">{{ reg.p05 + reg.p10 + reg.p15 + reg.p45 }}</td>
+              <td class="p-4 text-center font-bold text-blue-600">{{ reg.v05 + reg.v10 + reg.v15 + reg.v45 }}</td>
+              <td class="p-4 text-center font-bold text-red-500">{{ reg.r05 + reg.r10 + reg.r15 + reg.r45 }}</td>
+              <td class="p-4 text-right space-x-2">
+                <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded hover:bg-indigo-50 transition-colors" title="Editar">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </button>
+                <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded hover:bg-red-50 transition-colors" title="Eliminar">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1: Formulario de Registro (Independiente) -->
+<div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] lg:max-h-[85vh]">
+    <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <h2 class="text-white text-lg font-bold tracking-wider">
+        {{ isEditing ? 'EDITAR REGISTRO' : 'REGISTRO: LISTA MAESTRA DE VENTAS' }}
+      </h2>
+      <button (click)="closeForm()" class="text-slate-400 hover:text-white transition-colors focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" [formGroup]="ventasForm">
+      <div class="bg-white border border-slate-200 rounded-xl p-5 mb-6 grid grid-cols-1 md:grid-cols-3 gap-5 shadow-sm">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">FECHA</label>
+          <input type="date" formControlName="fecha" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
+          <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+            <option value="">Seleccione placa...</option>
+            <option value="ACK-826">ACK-826</option>
+            <option value="BBT-751">BBT-751</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label>
+          <input type="text" formControlName="conductor" placeholder="Nombre del conductor" class="w-full rounded-lg border-slate-300 text-sm bg-slate-50 focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-500 mb-1">DISTRIBUIDOR / CLIENTE</label>
+          <input type="text" formControlName="distribuidor" placeholder="Ej. RODIGAS E.I.R.L." class="w-full rounded-lg border-slate-300 text-sm bg-slate-50 focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">DISTRITO</label>
+          <input type="text" formControlName="distrito" placeholder="Ej. MALA" class="w-full rounded-lg border-slate-300 text-sm bg-slate-50 focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">CONDICIÓN</label>
+          <select formControlName="condicion" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] focus:border-[#4F46E5]">
+            <option value="P (Programado)">P (Programado)</option>
+            <option value="C (Contingencia)">C (Contingencia)</option>
+            <option value="O (Otro)">O (Otro)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-xl overflow-hidden mb-6 shadow-sm overflow-x-auto">
+        <table class="w-full text-center text-sm min-w-[600px]">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th class="py-3 px-4 text-left text-xs font-bold text-slate-500 w-1/4 border-r border-slate-200">TIPO DE CARGA</th>
+              <th class="py-3 px-2 text-xs font-bold text-slate-500 border-r border-slate-200">05 KG</th>
+              <th class="py-3 px-2 text-xs font-bold text-slate-500 border-r border-slate-200">10 KG</th>
+              <th class="py-3 px-2 text-xs font-bold text-slate-500 border-r border-slate-200">15 KG</th>
+              <th class="py-3 px-2 text-xs font-bold text-slate-500">45 KG</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr>
+              <td class="py-3 px-4 text-left font-bold text-slate-600 border-r border-slate-200">PROGRAMADO</td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="prog_05" class="w-full text-center border border-slate-200 rounded py-1.5 focus:ring-1 focus:ring-slate-400"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="prog_10" class="w-full text-center border border-slate-200 rounded py-1.5 focus:ring-1 focus:ring-slate-400"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="prog_15" class="w-full text-center border border-slate-200 rounded py-1.5 focus:ring-1 focus:ring-slate-400"></td>
+              <td class="p-2"><input type="number" formControlName="prog_45" class="w-full text-center border border-slate-200 rounded py-1.5 focus:ring-1 focus:ring-slate-400"></td>
+            </tr>
+            <tr class="bg-[#EEF2FF]">
+              <td class="py-3 px-4 text-left font-bold text-[#4F46E5] border-r border-slate-200">VENTA REAL</td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="venta_05" class="w-full text-center font-bold text-[#4F46E5] border border-[#C7D2FE] bg-white rounded py-1.5 focus:ring-1 focus:ring-[#4F46E5]"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="venta_10" class="w-full text-center font-bold text-[#4F46E5] border border-[#C7D2FE] bg-white rounded py-1.5 focus:ring-1 focus:ring-[#4F46E5]"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="venta_15" class="w-full text-center font-bold text-[#4F46E5] border border-[#C7D2FE] bg-white rounded py-1.5 focus:ring-1 focus:ring-[#4F46E5]"></td>
+              <td class="p-2"><input type="number" formControlName="venta_45" class="w-full text-center font-bold text-[#4F46E5] border border-[#C7D2FE] bg-white rounded py-1.5 focus:ring-1 focus:ring-[#4F46E5]"></td>
+            </tr>
+            <tr class="bg-[#FEF2F2]">
+              <td class="py-3 px-4 text-left font-bold text-red-600 border-r border-slate-200">RETORNO / MERMA</td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="ret_05" class="w-full text-center font-bold text-red-600 border border-red-200 bg-white rounded py-1.5 focus:ring-1 focus:ring-red-500"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="ret_10" class="w-full text-center font-bold text-red-600 border border-red-200 bg-white rounded py-1.5 focus:ring-1 focus:ring-red-500"></td>
+              <td class="p-2 border-r border-slate-200"><input type="number" formControlName="ret_15" class="w-full text-center font-bold text-red-600 border border-red-200 bg-white rounded py-1.5 focus:ring-1 focus:ring-red-500"></td>
+              <td class="p-2"><input type="number" formControlName="ret_45" class="w-full text-center font-bold text-red-600 border border-red-200 bg-white rounded py-1.5 focus:ring-1 focus:ring-red-500"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <label class="block text-xs font-bold text-slate-500 mb-2">OBSERVACIONES / INCIDENCIAS</label>
+        <textarea formControlName="observaciones" rows="3" placeholder="Detalle si hubo rechazos, tráfico, averías mecánicas..." class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] focus:border-[#4F46E5]"></textarea>
+      </div>
+    </div>
+
+    <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3 flex-shrink-0">
+      <span *ngIf="!isEditing" class="text-xs text-slate-400 mr-auto flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+        Autoguardado activo
+      </span>
+      <button (click)="closeForm()" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+        Cancelar
+      </button>
+      <button (click)="onSubmit()" class="px-5 py-2.5 text-sm font-bold text-white bg-[#4F46E5] rounded-lg hover:bg-[#4338CA] shadow-sm transition-colors">
+        {{ isEditing ? 'Guardar Cambios' : 'Registrar Venta' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: Modal Reutilizable de Confirmación (Independiente) -->
+<app-confirm-modal 
+  [isOpen]="showDeleteConfirm"
+  title="¿Eliminar registro operativo?"
+  message="Esta acción no se puede deshacer. Los datos de la venta se borrarán del sistema."
+  confirmText="Sí, eliminar"
+  (confirm)="executeDelete()"
+  (cancel)="cancelDelete()">
+</app-confirm-modal>

@@ -1,0 +1,161 @@
+<div class="space-y-6 relative h-full max-w-5xl mx-auto">
+  <!-- CABECERA -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Centro de Ayuda y Manual de Usuario</h1>
+      <p class="text-sm text-slate-500">Guía operativa del ERP RSC Diesel - Plataforma Integral Logística</p>
+    </div>
+    <div class="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100 flex items-center gap-2">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span class="text-sm font-bold text-indigo-800">Versión 1.0 (Producción)</span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    
+    <!-- MENÚ LATERAL DE NAVEGACIÓN (Sticky) -->
+    <div class="md:col-span-1">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sticky top-6 space-y-2">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">Índice del Manual</h3>
+        
+        <a href="#intro" class="block px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 hover:text-[#4F46E5] transition-colors">1. Introducción y Accesos</a>
+        <a href="#operaciones" class="block px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-amber-50 hover:text-amber-700 transition-colors">2. Guía: Operaciones (Móvil)</a>
+        <a href="#logistica" class="block px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 transition-colors">3. Guía: Logística (Oficina)</a>
+        <a href="#gerencia" class="block px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 transition-colors">4. Guía: Gerencia (Admin)</a>
+      </div>
+    </div>
+
+    <!-- CONTENIDO DEL MANUAL -->
+    <div class="md:col-span-3 space-y-6">
+      
+      <!-- 1. INTRODUCCIÓN -->
+      <div id="intro" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 scroll-mt-6">
+        <h2 class="text-xl font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">1. Introducción y Accesos</h2>
+        <div class="prose prose-sm text-slate-600 max-w-none">
+          <p>Bienvenido al <strong>ERP de Gestión Logística RSC Diesel</strong>. Este sistema ha sido diseñado para centralizar la operación, conectar el trabajo de campo de los conductores con la oficina y digitalizar las métricas gerenciales.</p>
+          <div class="bg-slate-50 p-4 rounded-lg mt-4 border border-slate-100">
+            <h4 class="font-bold text-slate-700 mb-2">¿Cómo inicio sesión?</h4>
+            <ul class="list-disc pl-5 space-y-1">
+              <li><strong>Usuario:</strong> Es el DNI o Carné de Extranjería (CE) registrado en el sistema.</li>
+              <li><strong>Contraseña por defecto:</strong> Es el mismo número de DNI o CE.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. OPERACIONES -->
+      <div id="operaciones" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 scroll-mt-6 border-t-4 border-t-amber-400">
+        <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-3">
+          <div class="bg-amber-100 p-2 rounded-lg"><svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div>
+          <h2 class="text-xl font-bold text-slate-800">2. Guía para Operaciones (Conductores y Promotores)</h2>
+        </div>
+        <div class="space-y-5 text-slate-600 text-sm">
+          <p>Este perfil está diseñado para usarse desde el celular. Sigue estos 3 pasos obligatorios en tu día a día:</p>
+          
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">Paso 1: Inicio de Jornada (Toma de Unidad)</h4>
+            <ol class="list-decimal pl-5 space-y-2">
+              <li>Al ingresar a la aplicación con tu DNI, lo primero que debes hacer es "reclamar" tu unidad.</li>
+              <li>Selecciona la <strong>placa del vehículo</strong> que vas a conducir hoy.</li>
+              <li>Ingresa el <strong>Kilometraje Inicial</strong> (lo que marca el tablero antes de arrancar).</li>
+              <li>Al confirmar, el sistema "destrabará" tu pantalla y te mostrará la ruta que Logística programó para ti.</li>
+            </ol>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">Paso 2: Ejecución de la Ruta y Despachos</h4>
+            <ol class="list-decimal pl-5 space-y-2">
+              <li>Dirígete a los clientes que aparecen en tu lista de tareas (marcados como <strong>PENDIENTE</strong>).</li>
+              <li>Al entregar la carga, abre el registro e ingresa la cantidad exacta de cilindros de GLP que realmente le vendiste al cliente.</li>
+              <li>Si hay cilindros defectuosos, con fugas o que no se vendieron, regístralos obligatoriamente en la sección de <strong>Mermas / Retornos</strong>.</li>
+              <li>Guarda el registro. La ruta pasará a estado <strong>COMPLETADO</strong>.</li>
+            </ol>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">Paso 3: Control de Combustible y Peajes</h4>
+            <ol class="list-decimal pl-5 space-y-2">
+              <li>Al momento de tanquear el camión en el grifo, entra al menú <strong>Control Combustible</strong>.</li>
+              <li>Ingresa el <strong>Kilometraje Final</strong> que marca tu tablero en ese instante.</li>
+              <li>Anota la cantidad de galones abastecidos y el precio que pagaste.</li>
+              <li>Si pagaste peajes durante esa ruta, anota la suma total en el recuadro naranja <strong>"Gasto de Peaje"</strong>.</li>
+              <li>Guarda tu ticket. ¡Tu reporte del día está cerrado!</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. LOGÍSTICA -->
+      <div id="logistica" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 scroll-mt-6 border-t-4 border-t-emerald-500">
+        <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-3">
+          <div class="bg-emerald-100 p-2 rounded-lg"><svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path></svg></div>
+          <h2 class="text-xl font-bold text-slate-800">3. Guía para Logística (Oficina)</h2>
+        </div>
+        <div class="space-y-5 text-slate-600 text-sm">
+          <p>El perfil Logística tiene el control de la planificación diaria. Desde una computadora, coordina qué unidad va a qué cliente.</p>
+          
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">A. Programación de Rutas (Asignación)</h4>
+            <p>Ve a <strong>Programación de Rutas</strong>. Tienes dos formas de asignar carga a los camiones:</p>
+            <ul class="list-disc pl-5 space-y-2">
+              <li><strong>Modo Manual:</strong> Haz clic en "Programar Manual", selecciona el camión, el cliente y escribe la cantidad de cilindros (05kg a 45kg) que llevarán.</li>
+              <li><strong>Carga Masiva (Excel):</strong> Si tienes 50 despachos, usa la matriz Excel. Coloca Fecha, Placa, RUC del cliente y las cantidades. Dale al botón verde "Carga Masiva" y el sistema cruzará los RUCs automáticamente.</li>
+            </ul>
+            <div class="bg-blue-50 p-3 rounded text-blue-800 text-xs mt-2 border border-blue-100">
+              <strong>Tip de Auditoría:</strong> Si editas una ruta manualmente, el sistema sellará tu nombre y la hora exacta del cambio para evitar conflictos.
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">B. Productividad Nocturna</h4>
+            <p>Para la carga en plataforma durante la madrugada (Industrias y Distribuidores):</p>
+            <ul class="list-disc pl-5 space-y-2">
+              <li>Registra el promotor a cargo y la placa del vehículo que se está cargando.</li>
+              <li>Ingresa la capacidad programada (Ej. 2500 Kg) y la carga real lograda. El sistema calculará el % de eficiencia.</li>
+              <li>Agrega observaciones operativas (Ej. Falta de envases, corte de luz).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. GERENCIA / ADMIN -->
+      <div id="gerencia" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 scroll-mt-6 border-t-4 border-t-[#4F46E5]">
+        <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-3">
+          <div class="bg-indigo-100 p-2 rounded-lg"><svg class="w-6 h-6 text-[#4F46E5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>
+          <h2 class="text-xl font-bold text-slate-800">4. Guía para Gerencia (Administración)</h2>
+        </div>
+        <div class="space-y-5 text-slate-600 text-sm">
+          <p>El perfil Administrador tiene acceso total a la plataforma, puede gestionar los accesos del personal y visualizar los cuadros de mando consolidados para la toma de decisiones.</p>
+          
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">A. Paneles de Mando (Dashboards)</h4>
+            <ul class="list-disc pl-5 space-y-2">
+              <li><strong>Ventas y Retornos (GO-F-007):</strong> Visualiza la gráfica de barras global. Compara instantáneamente la Venta Real vs. los Retornos/Mermas de la flota.</li>
+              <li><strong>Control Combustible (GO-F-010):</strong> Visualiza la gráfica de curva de rendimiento (Km/Gl). Mantén un ojo en las tarjetas superiores que te avisan de los sobreconsumos y totalizan el gasto en Peajes + Diésel.</li>
+            </ul>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">B. Generación de Reportes Financieros</h4>
+            <p>Todos los módulos (Combustible, Ventas, Productividad Nocturna) cuentan con un botón verde <strong>"Exportar Excel"</strong>. Al presionarlo:</p>
+            <ol class="list-decimal pl-5 space-y-2">
+              <li>El sistema tomará todos los datos visibles en la tabla.</li>
+              <li>Generará un documento Excel bloqueado y formateado listo para impresión (Lista Maestra).</li>
+              <li>Incrustará automáticamente el logotipo de RSC Diesel y los gráficos estadísticos dentro del archivo.</li>
+            </ol>
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="font-bold text-slate-800">C. Gestión de Personal (Usuarios)</h4>
+            <p>Para dar de alta a un nuevo trabajador o anularle el acceso si deja la empresa:</p>
+            <ul class="list-disc pl-5 space-y-2">
+              <li>Ve a <strong>Usuarios</strong>. Para cargas masivas, usa el botón de Excel con las columnas: DNI, NOMBRE COMPLETO, ROL.</li>
+              <li>Para bloquear el acceso a un ex-trabajador, dale al botón de la papelera roja. Sus viajes pasados no se borrarán, pero su acceso al sistema será denegado permanentemente.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

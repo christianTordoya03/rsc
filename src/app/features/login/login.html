@@ -1,0 +1,50 @@
+<div class="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <!-- Tu Logo -->
+    <img class="mx-auto h-20 w-auto object-contain bg-white rounded-xl px-4 py-2 shadow-sm" src="rsc.png" alt="RSC Diesel">
+    <h2 class="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
+      Portal Operativo
+    </h2>
+    <p class="mt-2 text-center text-sm text-slate-600">
+      Ingrese su DNI para acceder a su perfil de sistema
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 border border-slate-200">
+      
+      <form class="space-y-6" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <div>
+          <label for="dni" class="block text-sm font-bold text-slate-700 mb-1">
+            Nº de DNI
+          </label>
+          <div class="mt-1">
+            <input id="dni" type="text" formControlName="dni" maxlength="8"
+              class="appearance-none block w-full px-4 py-3 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-[#4F46E5] focus:border-[#4F46E5] sm:text-lg font-bold text-center tracking-[0.25em]"
+              placeholder="--------">
+          </div>
+          <!-- Validaciones visuales -->
+          <p *ngIf="loginForm.get('dni')?.touched && loginForm.get('dni')?.hasError('required')" class="mt-2 text-xs text-red-600 font-medium">El DNI es obligatorio.</p>
+          <p *ngIf="loginForm.get('dni')?.touched && loginForm.get('dni')?.hasError('pattern')" class="mt-2 text-xs text-red-600 font-medium">El DNI debe tener exactamente 8 números.</p>
+        </div>
+
+        <div>
+          <button type="submit" [disabled]="isLoading"
+            class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-[#1E1B4B] hover:bg-[#2E2856] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4F46E5] transition-all relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed">
+            <span *ngIf="isLoading" class="absolute left-6 w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            {{ isLoading ? 'VERIFICANDO CREDENCIALES...' : 'INGRESAR AL SISTEMA' }}
+          </button>
+        </div>
+      </form>
+      
+      <!-- Footer corporativo -->
+      <div class="mt-6 border-t border-slate-100 pt-6">
+        <p class="text-xs text-center text-slate-400 font-medium">
+          Servicios RSC Diesel E.I.R.L. &copy; 2026<br>Acceso exclusivo para personal autorizado
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>

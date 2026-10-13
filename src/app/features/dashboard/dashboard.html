@@ -1,0 +1,113 @@
+<div class="space-y-6 relative">
+  <!-- Loading Overlay -->
+  <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center">
+    <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Cabecera del Dashboard -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Consolidado Gerencial</h1>
+      <p class="text-sm text-slate-500">Análisis de rentabilidad, ventas y control de mermas</p>
+    </div>
+    <button (click)="exportarExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      Generar Reporte Excel
+    </button>
+  </div>
+
+  <!-- Panel de Filtros Inteligentes -->
+  <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+    <p class="text-[10px] font-bold text-[#4F46E5] uppercase tracking-wider mb-3">Filtros Operativos</p>
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
+        <select [(ngModel)]="filtroPlaca" (change)="aplicarFiltros()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+          <option value="">Todas las unidades</option>
+          <option *ngFor="let p of placas" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">OPERADOR</label>
+        <select [(ngModel)]="filtroOperador" (change)="aplicarFiltros()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+          <option value="">Todos los conductores</option>
+          <option *ngFor="let op of operadores" [value]="op.id">{{ op.nombre_completo }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">CLIENTE DESTINO</label>
+        <select [(ngModel)]="filtroCliente" (change)="aplicarFiltros()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+          <option value="">Todos los clientes</option>
+          <option *ngFor="let cli of clientes" [value]="cli.id">{{ cli.razon_social }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">DESDE</label>
+        <input type="date" [(ngModel)]="fechaInicio" (change)="aplicarFiltros()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-500 mb-1">HASTA</label>
+        <input type="date" [(ngModel)]="fechaFin" (change)="aplicarFiltros()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs Gerenciales -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Programado KG -->
+    <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total Programado</p>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-slate-800">{{ kpiProgramadoKg | number:'1.0-0' }}</span>
+        <span class="text-xs font-bold text-slate-500">KG</span>
+      </div>
+    </div>
+    
+    <!-- Vendido KG -->
+    <div class="bg-emerald-50 rounded-xl p-5 border border-emerald-100 shadow-sm">
+      <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Venta Real Efectiva</p>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-emerald-700">{{ kpiVendidoKg | number:'1.0-0' }}</span>
+        <span class="text-xs font-bold text-emerald-600">KG</span>
+      </div>
+    </div>
+
+    <!-- % Venta -->
+    <div class="bg-[#1E1B4B] rounded-xl p-5 shadow-sm">
+      <p class="text-[10px] font-bold text-indigo-300 uppercase tracking-wider mb-1">Efectividad de Venta</p>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black" [ngClass]="kpiPorcentajeVenta >= 90 ? 'text-emerald-400' : 'text-amber-400'">
+          {{ kpiPorcentajeVenta | number:'1.1-1' }}%
+        </span>
+      </div>
+    </div>
+    
+    <!-- Retornado KG -->
+    <div class="bg-red-50 rounded-xl p-5 border border-red-100 shadow-sm">
+      <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Mermas / Rechazos</p>
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-black text-red-600">{{ kpiRetornadoKg | number:'1.0-0' }}</span>
+        <span class="text-xs font-bold text-red-500">KG</span>
+      </div>
+    </div>
+
+    <!-- % Retorno -->
+    <div class="bg-white rounded-xl p-5 border border-red-200 shadow-sm text-center">
+      <p class="text-[10px] font-bold text-red-500 uppercase tracking-wider mb-1">Tasa de Retorno</p>
+      <div class="flex items-baseline justify-center gap-2">
+        <span class="text-3xl font-black text-red-600">{{ kpiPorcentajeRetorno | number:'1.1-1' }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfico de Comparación -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-80 relative w-full flex flex-col">
+    <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 uppercase tracking-wider">
+      Comparativa de Volumen Movilizado (Kilogramos)
+    </h3>
+    <div class="flex-1 relative w-full">
+      <canvas #rendimientoChart></canvas>
+    </div>
+  </div>
+
+</div>
