@@ -21,50 +21,57 @@ export class Login {
     private router: Router,
     private toast: ToastService
   ) {
+    // Un solo campo que acepta hasta 12 caracteres (DNI o CE)
     this.loginForm = this.fb.group({
-      dni: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]]
+      documento: ['', [Validators.required, Validators.maxLength(12)]]
     });
   }
 
   async onSubmit() {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
-
-    this.isLoading = true;
-    const dni = this.loginForm.value.dni;
-    const pseudoEmail = `${dni}@rscdiesel.com`;
-
-    try {
-      // 1. Iniciar sesión
-      const { data, error } = await this.supabase.auth.signInWithPassword({
-        email: pseudoEmail,
-        password: dni
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        // 2. Leer el rol del usuario en la tabla perfiles
-        const { data: perfil } = await this.supabase.perfiles
-          .select('rol')
-          .eq('id', data.session.user.id)
-          .single();
-
-        this.toast.showSuccess('Bienvenido al sistema');
-
-        // 3. Redirección inteligente basada en el rol
-        if (perfil && perfil.rol === 'OPERACIONES') {
-          this.router.navigate(['/operador']); // Pantalla móvil exclusiva
-        } else {
-          this.router.navigate(['/dashboard']); // Pantalla administrativa
-        }
-      }
-    } catch (error: any) {
-      this.toast.showError('Acceso denegado. DNI no registrado o incorrecto.');
-    } finally {
-      this.isLoading = false;
-    }
+  if (this.loginForm.invalid) {
+    this.loginForm.markAllAsTouched();
+    return;
   }
+
+  this.isLoading = true;
+  const documento = this.loginForm.value.documento.trim();
+  
+  // Usamos el documento tanto para el email como para la contraseña
+  const pseudoEmail = `${documento.toLowerCase()}@rscdiesel.com`;
+
+  try {
+    const { data, error } = await this.supabase.auth.signInWithPassword({
+      email: pseudoEmail,
+      password: documento
+    });
+
+    if (error) throw error;
+
+    if (data.session) {
+      // SOLO pedimos rol y nombre_completo. ¡Nada de estado!
+      const { data: perfil, error: perfilError } = await this.supabase.from('perfiles')
+        .select('rol, nombre_completo')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (perfilError) throw perfilError;
+
+      this.toast.showSuccess(`Bienvenido, ${perfil?.nombre_completo?.split(' ')[0] || 'Usuario'}`);
+
+      // Redirección
+      const rol = perfil?.rol;
+      if (rol === 'ADMIN') {
+        this.router.navigate(['/ventas-retornos']);
+      } else if (rol === 'LOGISTICA') {
+        this.router.navigate(['/programacion-rutas']);
+      } else if (rol === 'OPERACIONES') {
+        this.router.navigate(['/operador']); 
+      }
+    }
+  } catch (error: any) {
+    this.toast.showError('Acceso denegado. Documento incorrecto.');
+  } finally {
+    this.isLoading = false;
+  }
+}
 }

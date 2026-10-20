@@ -95,7 +95,6 @@ export class ProgramacionRutasComponent implements OnInit {
   get rutasHistorial() { return this.rutas.filter(r => r.estado !== 'PENDIENTE' && this.cumpleFiltros(r)); }
 
   async importarExcel(event: any) {
-    // ... (Mismo código de Excel que ya tenías)
     const file = event.target.files[0];
     if (!file) return;
 
@@ -107,8 +106,10 @@ export class ProgramacionRutasComponent implements OnInit {
       await workbook.xlsx.load(await file.arrayBuffer());
       const worksheet = workbook.worksheets[0];
 
-      const mapaClientes = new Map(this.clientesActivos.map(c => [c.ruc, c.id]));
+      // Mapa de RUCs de la BD (limpiando espacios por si acaso)
+      const mapaClientes = new Map(this.clientesActivos.map(c => [c.ruc.trim(), c.id]));
       const nuevasRutas: any[] = [];
+      const rucsNoEncontrados: string[] = []; // NUEVO: Para guardar errores
 
       worksheet.eachRow((row, rowNumber) => {
         if (rowNumber > 1) { 
@@ -121,7 +122,8 @@ export class ProgramacionRutasComponent implements OnInit {
           }
 
           const placa = row.getCell(2).text?.trim().toUpperCase();
-          const rucCliente = row.getCell(3).text?.trim();
+          // Aseguramos quitar espacios basura del Excel
+          const rucCliente = row.getCell(3).text?.trim(); 
           
           const p05 = Number(row.getCell(4).value) || 0;
           const p10 = Number(row.getCell(5).value) || 0;
@@ -129,28 +131,45 @@ export class ProgramacionRutasComponent implements OnInit {
           const p15 = Number(row.getCell(7).value) || 0;
           const p45 = Number(row.getCell(8).value) || 0;
 
+          // Buscamos el ID
           const clienteId = mapaClientes.get(rucCliente);
 
+          // Si hay RUC pero no hay ID, lo guardamos como error
+          if (rucCliente && !clienteId) {
+            if (!rucsNoEncontrados.includes(rucCliente)) {
+              rucsNoEncontrados.push(rucCliente);
+            }
+          }
+
+          // Si todo está correcto, creamos la ruta
           if (fechaStr && placa && clienteId) {
             const total = p05 + p10 + pm15 + p15 + p45;
             if (total > 0) {
               nuevasRutas.push({
                 fecha_despacho: fechaStr, placa, cliente_id: clienteId,
                 p05, p10, pm15, p15, p45, estado: 'PENDIENTE', venta_real: 0, merma: 0,
-                programador_nombre: this.userName // <--- Añade esta línea
+                programador_nombre: this.userName
               });
             }
           }
         }
       });
 
+      // Si hubo RUCs fantasma, detenemos todo y avisamos
+      // NUEVA LÓGICA (Carga Parcial): Avisamos de los ignorados pero NO detenemos el proceso
+      if (rucsNoEncontrados.length > 0) {
+        this.toast.showWarning(`Se ignoraron RUCs no registrados: ${rucsNoEncontrados.join(', ')}`);
+        // Quitamos el "return;" para que el código continúe hacia abajo
+      }
+
+      // El código sigue y guarda todas las rutas buenas que sí encontró
       if (nuevasRutas.length > 0) {
         const { data, error } = await this.supabase.despachos.insert(nuevasRutas).select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`);
         if (error) throw error;
         this.rutas = [...(data || []), ...this.rutas];
-        this.toast.showSuccess(`${nuevasRutas.length} rutas asignadas`);
+        this.toast.showSuccess(`${nuevasRutas.length} rutas asignadas correctamente`);
       } else {
-        this.toast.showWarning('No se generaron rutas.');
+        this.toast.showWarning('No se generó ninguna ruta válida.');
       }
     } catch (error: any) {
       this.toast.showError('Error al importar Excel: ' + error.message);

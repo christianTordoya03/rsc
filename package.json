@@ -28,6 +28,7 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@angular/service-worker": "^20.3.33",
     "@supabase/supabase-js": "^2.117.2",
     "chart.js": "^4.5.1",
     "exceljs": "^4.4.0",

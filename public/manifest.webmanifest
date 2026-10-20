@@ -1,0 +1,23 @@
+{
+  "name": "ERP Logístico RSC Diesel",
+  "short_name": "RSC Diesel",
+  "theme_color": "#1E1B4B",
+  "background_color": "#f8fafc",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "rsc.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "rsc.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}
