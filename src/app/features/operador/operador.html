@@ -64,11 +64,38 @@
           <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
             <div class="h-2.5 rounded-full transition-all duration-500" [ngClass]="getEstadoSemaforo(ruta).color" [style.width.%]="getEstadoSemaforo(ruta).pct"></div>
           </div>
+        </div>
+
+        <!-- DESGLOSE DE CARGA PARA EL OPERADOR (TAREA 3) -->
+        <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <p class="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
+            <i class="fas fa-boxes mr-1"></i> Detalle de Carga Programada
+          </p>
           
-          <div class="flex gap-2 mt-2 pt-2 border-t border-slate-200 text-[10px] font-bold text-slate-400">
-            <span>Total Prog: {{ (ruta.p05||0) + (ruta.p10||0) + (ruta.pm15||0) + (ruta.p15||0) + (ruta.p45||0) }}</span>
-            <span>|</span>
-            <span class="text-indigo-600">Entregados: {{ (ruta.v05||0) + (ruta.v10||0) + (ruta.vm15||0) + (ruta.v15||0) + (ruta.v45||0) }}</span>
+          <div class="flex flex-wrap gap-2">
+            <!-- Balón 5kg -->
+            <div *ngIf="ruta.p05 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
+              <span class="text-[10px] text-gray-500 block">5 KG</span>
+              <span class="font-bold text-gray-800 text-lg">{{ ruta.p05 }}</span>
+            </div>
+            
+            <!-- Balón 10kg -->
+            <div *ngIf="ruta.p10 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
+              <span class="text-[10px] text-gray-500 block">10 KG</span>
+              <span class="font-bold text-gray-800 text-lg">{{ ruta.p10 }}</span>
+            </div>
+            
+            <!-- Balón 15kg -->
+            <div *ngIf="ruta.p15 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
+              <span class="text-[10px] text-gray-500 block">15 KG</span>
+              <span class="font-bold text-gray-800 text-lg">{{ ruta.p15 }}</span>
+            </div>
+            
+            <!-- Cilindro 45kg -->
+            <div *ngIf="ruta.p45 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
+              <span class="text-[10px] text-gray-500 block">45 KG</span>
+              <span class="font-bold text-gray-800 text-lg">{{ ruta.p45 }}</span>
+            </div>
           </div>
         </div>
 
@@ -183,13 +210,28 @@
 
     <form [formGroup]="despachoForm" (ngSubmit)="registrarDespacho()" class="p-5 overflow-y-auto space-y-6">
 
+      <!-- ================= BANNER DINÁMICO ================= -->
+      <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-blue-800">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          <span class="text-[10px] font-bold uppercase tracking-widest">Pendiente por Entregar</span>
+        </div>
+        <div class="flex flex-wrap gap-2 text-sm font-black justify-center">
+          <span *ngIf="getFaltante('05') > 0" class="bg-white text-blue-700 px-2 py-1 rounded border border-blue-100 shadow-sm text-xs">5kg: {{ getFaltante('05') }}</span>
+          <span *ngIf="getFaltante('10') > 0" class="bg-white text-blue-700 px-2 py-1 rounded border border-blue-100 shadow-sm text-xs">10kg: {{ getFaltante('10') }}</span>
+          <span *ngIf="getFaltante('15') > 0" class="bg-white text-blue-700 px-2 py-1 rounded border border-blue-100 shadow-sm text-xs">15kg: {{ getFaltante('15') }}</span>
+          <span *ngIf="getFaltante('45') > 0" class="bg-white text-blue-700 px-2 py-1 rounded border border-blue-100 shadow-sm text-xs">45kg: {{ getFaltante('45') }}</span>
+          <span *ngIf="getFaltante('05')===0 && getFaltante('10')===0 && getFaltante('15')===0 && getFaltante('45')===0" class="text-xs text-blue-600 italic">No hay pendientes</span>
+        </div>
+      </div>
+      <!-- ================= FIN BANNER ================= -->
+
       <!-- Venta Real Entregada -->
       <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
         <label class="block text-xs font-bold text-[#4F46E5] mb-2 uppercase tracking-wide">Entregado en este viaje</label>
-        <div class="grid grid-cols-5 gap-1.5">
+        <div class="grid grid-cols-4 gap-1.5">
           <div class="text-center"><span class="block text-[10px] font-bold text-slate-500 mb-1">05 KG</span><input type="number" formControlName="v05" class="w-full text-center py-2 px-1 border border-slate-300 rounded focus:ring-2 focus:ring-[#4F46E5] outline-none font-bold text-[#4F46E5]"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-slate-500 mb-1">10 KG</span><input type="number" formControlName="v10" class="w-full text-center py-2 px-1 border border-slate-300 rounded focus:ring-2 focus:ring-[#4F46E5] outline-none font-bold text-[#4F46E5]"></div>
-          <div class="text-center"><span class="block text-[10px] font-bold text-slate-500 mb-1">M-15</span><input type="number" formControlName="vm15" class="w-full text-center py-2 px-1 border border-slate-300 rounded focus:ring-2 focus:ring-[#4F46E5] outline-none font-bold text-amber-600"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-slate-500 mb-1">15 KG</span><input type="number" formControlName="v15" class="w-full text-center py-2 px-1 border border-slate-300 rounded focus:ring-2 focus:ring-[#4F46E5] outline-none font-bold text-[#4F46E5]"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-slate-500 mb-1">45 KG</span><input type="number" formControlName="v45" class="w-full text-center py-2 px-1 border border-slate-300 rounded focus:ring-2 focus:ring-[#4F46E5] outline-none font-bold text-[#4F46E5]"></div>
         </div>
@@ -198,10 +240,9 @@
       <!-- Mermas / Defectos -->
       <div class="bg-red-50 p-3 rounded-xl border border-red-100">
         <label class="block text-xs font-bold text-red-600 mb-2 uppercase tracking-wide">Mermas / Defectos / Rechazos</label>
-        <div class="grid grid-cols-5 gap-1.5">
+        <div class="grid grid-cols-4 gap-1.5">
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">05 KG</span><input type="number" formControlName="m05" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">10 KG</span><input type="number" formControlName="m10" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
-          <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">M-15</span><input type="number" formControlName="mm15" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">15 KG</span><input type="number" formControlName="m15" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">45 KG</span><input type="number" formControlName="m45" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
         </div>

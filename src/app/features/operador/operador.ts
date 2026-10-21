@@ -52,9 +52,10 @@ export class OperadorComponent implements OnInit {
       peajes: [0, Validators.min(0)]
     });
 
+    // AQUÍ ESTÁ EL CAMBIO (Limpio sin vm15 ni mm15)
     this.despachoForm = this.fb.group({
-      v05: [0], v10: [0], vm15: [0], v15: [0], v45: [0], 
-      m05: [0], m10: [0], mm15: [0], m15: [0], m45: [0], 
+      v05: [0], v10: [0], v15: [0], v45: [0], 
+      m05: [0], m10: [0], m15: [0], m45: [0], 
       observaciones: [''],
       cambio_programacion: [0],
       tipo_movimiento_cilindro: ['NINGUNO'],
@@ -100,7 +101,6 @@ export class OperadorComponent implements OnInit {
     const hoy = new Date().toISOString().split('T')[0];
 
     try {
-      // 1. Reclamar todas las rutas PENDIENTES o EN_PROCESO de esta placa
       const { error: updateError } = await this.supabase.despachos
         .update({ operador_id: this.userId })
         .eq('placa', placaSeleccionada)
@@ -110,14 +110,12 @@ export class OperadorComponent implements OnInit {
 
       if (updateError) throw updateError;
 
-      // 2. Guardar sesión de unidad en el celular
       this.datosJornada = { placa: placaSeleccionada, kmInicial: kmInicial, fecha: hoy };
       localStorage.setItem('jornada_rsc', JSON.stringify(this.datosJornada));
       
       this.jornadaActiva = true;
       this.showModalCheckin = false;
       
-      // 3. Descargar rutas
       await this.cargarRutasReales();
 
       this.toast.showSuccess(`Unidad ${placaSeleccionada} asignada exitosamente`);
@@ -147,11 +145,9 @@ export class OperadorComponent implements OnInit {
         gasto_peaje: this.checkoutForm.value.peajes
       };
       
-      // Guardar consumo de combustible (Asegúrate de que la tabla 'control_combustible' exista)
       const { error } = await this.supabase.from('control_combustible').insert(payload);
-      if (error) console.error("Error guardando combustible:", error); // Evitamos bloqueo si la tabla no existe aún
+      if (error) console.error("Error guardando combustible:", error); 
 
-      // Limpiar datos
       localStorage.removeItem('jornada_rsc');
       this.jornadaActiva = false;
       this.showModalCheckout = false;
@@ -172,7 +168,7 @@ export class OperadorComponent implements OnInit {
     const { data, error } = await this.supabase.despachos
       .select(`*, clientes(razon_social, direccion)`)
       .eq('placa', this.datosJornada.placa)
-      .neq('estado', 'COMPLETADO') // Ocultar los ya terminados
+      .neq('estado', 'COMPLETADO') 
       .neq('estado', 'ANULADO')
       .order('creado_en', { ascending: true });
 
@@ -193,7 +189,6 @@ export class OperadorComponent implements OnInit {
   // --- PASO 2: DESPACHO (ENTREGA PARCIAL O TOTAL) ---
   abrirDespacho(ruta: any) {
     this.rutaActual = ruta;
-    // Reseteamos a 0 para que ingrese SOLO lo que está dejando en este viaje
     this.despachoForm.reset({
       v05: 0, v10: 0, vm15: 0, v15: 0, v45: 0,
       m05: 0, m10: 0, mm15: 0, m15: 0, m45: 0,
@@ -201,6 +196,16 @@ export class OperadorComponent implements OnInit {
     });
     this.archivoEvidencia = null;
     this.showDespachoModal = true;
+  }
+
+  // NUEVO: Calcula cuánto falta por entregar de cada tipo (Restando Ventas y Mermas)
+  getFaltante(tipo: string): number {
+    if (!this.rutaActual) return 0;
+    const programado = this.rutaActual[`p${tipo}`] || 0;
+    const vendido = this.rutaActual[`v${tipo}`] || 0;
+    const merma = this.rutaActual[`m${tipo}`] || 0;
+    const faltante = programado - vendido - merma;
+    return faltante > 0 ? faltante : 0;
   }
 
   get tieneMerma() {
@@ -223,55 +228,71 @@ export class OperadorComponent implements OnInit {
     this.isLoading = true;
     const v = this.despachoForm.value;
     const r = this.rutaActual;
-    let urlFoto = r.evidencia_url || null; // Mantenemos la foto anterior si no hay nueva
+    
+    // IMPORTANTE: Cada viaje inicia sin foto. Solo toma foto si en ESTE viaje hay merma.
+    let urlFoto = null; 
 
     try {
+      // 1. SUBIR LA FOTO DE ESTE VIAJE EN ESPECÍFICO (Si hay merma)
       if (this.tieneMerma && this.archivoEvidencia) {
         const fileExt = this.archivoEvidencia.name.split('.').pop();
         const fileName = `${new Date().getTime()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
         const { error: uploadError } = await this.supabase.storage.from('evidencias').upload(`mermas/${fileName}`, this.archivoEvidencia);
         if (uploadError) throw uploadError;
+        
         const { data: publicUrlData } = this.supabase.storage.from('evidencias').getPublicUrl(`mermas/${fileName}`);
         urlFoto = publicUrlData.publicUrl;
       }
 
-      // ACUMULADOR: Histórico + Lo entregado en este momento
+      // 2. GUARDAR EL VIAJE INDIVIDUAL (Línea de tiempo para el Administrador)
+      const entregaIndividual = {
+        despacho_id: r.id,
+        v05: v.v05, v10: v.v10, vm15: v.vm15, v15: v.v15, v45: v.v45,
+        m05: v.m05, m10: v.m10, mm15: v.mm15, m15: v.m15, m45: v.m45,
+        foto_merma_url: urlFoto, 
+        cambio_programacion: v.cambio_programacion,
+        tipo_movimiento_cilindro: v.tipo_movimiento_cilindro,
+        cantidad_cilindros: v.cantidad_cilindros,
+        observaciones: v.observaciones
+      };
+      const { error: insertError } = await this.supabase.from('entregas_parciales').insert(entregaIndividual);
+      if (insertError) throw insertError;
+
+      // ACUMULADOR (Limpio)
       const newV05 = (r.v05 || 0) + v.v05;
       const newV10 = (r.v10 || 0) + v.v10;
-      const newVm15 = (r.vm15 || 0) + v.vm15;
       const newV15 = (r.v15 || 0) + v.v15;
       const newV45 = (r.v45 || 0) + v.v45;
 
       const newM05 = (r.m05 || 0) + v.m05;
       const newM10 = (r.m10 || 0) + v.m10;
-      const newMm15 = (r.mm15 || 0) + v.mm15;
       const newM15 = (r.m15 || 0) + v.m15;
       const newM45 = (r.m45 || 0) + v.m45;
 
-      const totalVendidoHistorico = newV05 + newV10 + newVm15 + newV15 + newV45;
-      const totalProg = r.p05 + r.p10 + r.pm15 + r.p15 + r.p45;
+      const totalVendidoHistorico = newV05 + newV10 + newV15 + newV45;
+      const totalMermasHistorico = newM05 + newM10 + newM15 + newM45;
       
-      const nuevoEstado = totalVendidoHistorico >= totalProg ? 'COMPLETADO' : 'EN_PROCESO';
+      // EL ESTADO AHORA SUMA VENTAS + MERMAS PARA LLEGAR AL 100%
+      const totalProcesado = totalVendidoHistorico + totalMermasHistorico;
+      const totalProg = (r.p05||0) + (r.p10||0) + (r.p15||0) + (r.p45||0);
+      
+      const nuevoEstado = totalProcesado >= totalProg ? 'COMPLETADO' : 'EN_PROCESO';
 
-      const payload = {
+      const payloadDespacho = {
         venta_real: totalVendidoHistorico,
-        merma: newM05 + newM10 + newMm15 + newM15 + newM45,
-        evidencia_url: urlFoto,
-        cambio_programacion: v.cambio_programacion,
-        tipo_movimiento_cilindro: v.tipo_movimiento_cilindro,
-        cantidad_cilindros: v.cantidad_cilindros,
-        observaciones: v.observaciones, // Podríamos concatenar la obs si es necesario
-        v05: newV05, v10: newV10, vm15: newVm15, v15: newV15, v45: newV45,
-        m05: newM05, m10: newM10, mm15: newMm15, m15: newM15, m45: newM45,
+        merma: totalMermasHistorico,
+        v05: newV05, v10: newV10, v15: newV15, v45: newV45,
+        m05: newM05, m10: newM10, m15: newM15, m45: newM45,
         estado: nuevoEstado
       };
 
-      const { error } = await this.supabase.despachos.update(payload).eq('id', r.id);
-      if (error) throw error;
+      const { error: updateError } = await this.supabase.despachos.update(payloadDespacho).eq('id', r.id);
+      if (updateError) throw updateError;
       
-      this.toast.showSuccess(`Se sumaron los cilindros. Estado: ${nuevoEstado}`);
+      this.toast.showSuccess(`Viaje registrado. Estado: ${nuevoEstado}`);
       this.showDespachoModal = false;
-      await this.cargarRutasReales(); // Recarga y actualiza semáforos
+      await this.cargarRutasReales(); 
     } catch (error: any) {
       this.toast.showError('Error al registrar: ' + error.message);
     } finally {

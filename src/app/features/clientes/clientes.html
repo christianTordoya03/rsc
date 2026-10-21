@@ -4,14 +4,21 @@
       <h1 class="text-2xl font-bold text-slate-800">Directorio de Clientes</h1>
       <p class="text-sm text-slate-500">Gestión de distribuidoras, grifos y empresas corporativas</p>
     </div>
-    <div class="flex items-center gap-3 w-full sm:w-auto">
+    <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
       
-      <!-- BOTÓN DE CARGA MASIVA (Solo Admin) -->
-      <input type="file" #fileInput accept=".xlsx, .xls" class="hidden" (change)="importarExcel($event)">
-      <button (click)="fileInput.click()" *ngIf="userRole === 'ADMIN'" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        Importar Excel
-      </button>
+      <!-- BOTONES DE ADMINISTRACIÓN -->
+      <ng-container *ngIf="userRole === 'ADMIN'">
+        <button (click)="confirmDeleteAll()" class="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          Vaciar DB
+        </button>
+
+        <input type="file" #fileInput accept=".xlsx, .xls" class="hidden" (change)="importarExcel($event)">
+        <button (click)="fileInput.click()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Sincronizar DB
+        </button>
+      </ng-container>
 
       <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2.5 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -20,34 +27,60 @@
     </div>
   </div>
 
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="overflow-x-auto min-h-[400px] relative">
-      <!-- Loading Overlay visual -->
-      <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center">
-        <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
-      </div>
+  <!-- BÚSQUEDA Y CONTADORES -->
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <div class="w-full sm:w-96 relative">
+      <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      <input type="text" [(ngModel)]="terminoBusqueda" (ngModelChange)="onSearchChange()" placeholder="Buscar por Nombre, RUC o Código..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all">
+    </div>
+    <div class="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      Registros Totales: <span class="text-[#4F46E5]">{{ clientesFiltrados.length }}</span>
+    </div>
+  </div>
 
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px] relative">
+    
+    <div *ngIf="isLoading" class="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+        <p class="font-bold text-indigo-900 animate-pulse">Sincronizando Base de Datos...</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto flex-1">
       <table class="w-full text-left border-collapse whitespace-nowrap">
         <thead>
-          <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-            <th class="p-4 font-semibold">Empresa / RUC</th>
-            <th class="p-4 font-semibold">Contacto y Ubicación</th>
-            <th class="p-4 font-semibold text-center">Estado</th>
-            <th class="p-4 font-semibold text-right">Acciones</th>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
+            <th class="p-4">Código / Empresa</th>
+            <th class="p-4">RUC / Contacto</th>
+            <th class="p-4">Ubicación y Zona</th>
+            <th class="p-4 text-center">Estado</th>
+            <th class="p-4 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-sm">
-          <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
+          <tr *ngIf="clientesFiltrados.length === 0 && !isLoading">
+            <td colspan="5" class="p-8 text-center text-slate-400">
+              No se encontraron clientes. Ajuste la búsqueda o sincronice el Excel.
+            </td>
+          </tr>
+          
+          <tr *ngFor="let reg of clientesFiltrados | slice: (paginaActual-1)*itemsPorPagina : paginaActual*itemsPorPagina" class="hover:bg-slate-50 transition-colors">
             <td class="p-4">
-              <div class="font-bold text-[#4F46E5]">{{ reg.razon_social }}</div>
-              <div class="text-slate-500 text-xs tracking-wider">RUC: {{ reg.ruc }}</div>
+              <div class="text-[10px] font-black text-slate-400 mb-0.5">CÓD: {{ reg.codigo_cliente }}</div>
+              <div class="font-bold text-[#4F46E5] truncate max-w-[300px]" [title]="reg.razon_social">{{ reg.razon_social }}</div>
             </td>
             <td class="p-4">
-              <div class="font-medium text-slate-800">{{ reg.contacto || 'Sin contacto' }} <span class="text-xs text-slate-400 ml-1">{{ reg.telefono }}</span></div>
-              <div class="text-slate-500 text-xs truncate max-w-[200px]">{{ reg.direccion }}, {{ reg.distrito }}</div>
+              <div class="font-mono text-slate-800">{{ reg.ruc || 'SIN RUC' }}</div>
+              <div class="text-slate-500 text-xs mt-0.5">{{ reg.contacto || 'Sin contacto' }} <span class="text-slate-400 ml-1">{{ reg.telefono }}</span></div>
+            </td>
+            <td class="p-4">
+              <div class="font-bold text-slate-700">{{ reg.zona || 'Sin Zona' }}</div>
+              <div class="text-slate-500 text-xs truncate max-w-[200px]" [title]="reg.direccion">{{ reg.direccion }}, {{ reg.distrito || 'Sin Distrito' }}</div>
             </td>
             <td class="p-4 text-center">
-              <span class="px-3 py-1 rounded-full text-xs font-bold" [ngClass]="reg.estado ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+              <span class="px-2 py-1 rounded text-[10px] font-bold" [ngClass]="reg.estado ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
                 {{ reg.estado ? 'ACTIVO' : 'INACTIVO' }}
               </span>
             </td>
@@ -55,8 +88,6 @@
               <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded transition-colors" title="Editar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
               </button>
-              
-              <!-- BOTÓN ELIMINAR (Solo Admin) -->
               <button *ngIf="userRole === 'ADMIN'" (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded transition-colors" title="Eliminar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
               </button>
@@ -65,9 +96,34 @@
         </tbody>
       </table>
     </div>
+
+    <!-- CONTROLES DE PAGINACIÓN -->
+    <div class="bg-slate-50 border-t border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-xl shrink-0">
+      <div class="text-xs text-slate-500 font-medium">
+        Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }} - 
+        <span *ngIf="paginaActual * itemsPorPagina < clientesFiltrados.length">{{ paginaActual * itemsPorPagina }}</span>
+        <span *ngIf="paginaActual * itemsPorPagina >= clientesFiltrados.length">{{ clientesFiltrados.length }}</span>
+        de {{ clientesFiltrados.length }}
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button (click)="cambiarPagina(-1)" [disabled]="paginaActual === 1" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-bold flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          Anterior
+        </button>
+        <span class="text-xs font-bold text-[#4F46E5] bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+          Pág {{ paginaActual }} de {{ totalPaginas }}
+        </span>
+        <button (click)="cambiarPagina(1)" [disabled]="paginaActual === totalPaginas || totalPaginas === 0" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-bold flex items-center gap-1">
+          Siguiente
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- Formulario de Registro/Edición -->
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -78,11 +134,15 @@
     <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" [formGroup]="clienteForm">
       <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">RUC (11 DÍGITOS)</label>
-          <input type="text" formControlName="ruc" maxlength="11" placeholder="Ej. 20123456789" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <label class="block text-xs font-bold text-slate-500 mb-1">CÓDIGO DESTINATARIO (Único)</label>
+          <input type="text" formControlName="codigo_cliente" placeholder="Obligatorio" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">RAZÓN SOCIAL</label>
+          <label class="block text-xs font-bold text-slate-500 mb-1">RUC (Opcional)</label>
+          <input type="text" formControlName="ruc" maxlength="11" placeholder="Ej. 20123456789" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-500 mb-1">RAZÓN SOCIAL / EMPRESA</label>
           <input type="text" formControlName="razon_social" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
         <div class="md:col-span-2">
@@ -90,19 +150,27 @@
           <input type="text" formControlName="direccion" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">DISTRITO</label>
-          <input type="text" formControlName="distrito" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <label class="block text-xs font-bold text-slate-500 mb-1">ZONA (Ej. LIMA LOCAL)</label>
+          <input type="text" formControlName="zona" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">TELÉFONO / CELULAR</label>
-          <input type="text" formControlName="telefono" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <label class="block text-xs font-bold text-slate-500 mb-1">DISTRITO</label>
+          <input type="text" formControlName="distrito" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">CONTACTO (GERENCIA / RECEPCIÓN)</label>
-          <input type="text" formControlName="contacto" placeholder="Nombre de la persona" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <label class="block text-xs font-bold text-slate-500 mb-1">TIPO CLIENTE (Ej. GRANJA)</label>
+          <input type="text" formControlName="tipo_cliente" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">TELÉFONO / CELULAR</label>
+          <input type="text" formControlName="telefono" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">CONTACTO (GERENCIA)</label>
+          <input type="text" formControlName="contacto" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">CORREO ELECTRÓNICO</label>
@@ -125,4 +193,22 @@
   </div>
 </div>
 
-<app-confirm-modal [isOpen]="showDeleteConfirm" title="¿Eliminar Cliente?" message="Se borrarán todos sus datos del directorio." confirmText="Sí, eliminar" (confirm)="executeDelete()" (cancel)="cancelDelete()"></app-confirm-modal>
+<!-- Modal Eliminar 1 -->
+<app-confirm-modal 
+  [isOpen]="showDeleteConfirm" 
+  title="¿Eliminar Cliente?" 
+  message="Se borrarán todos sus datos del directorio." 
+  confirmText="Sí, eliminar" 
+  (confirm)="executeDelete()" 
+  (cancel)="cancelDelete()">
+</app-confirm-modal>
+
+<!-- Modal Eliminar TODOS -->
+<app-confirm-modal 
+  [isOpen]="showDeleteAllConfirm" 
+  title="⚠️ PELIGRO: VACIAR DIRECTORIO" 
+  message="¿Estás completamente seguro de eliminar TODOS los clientes? Esta acción es irreversible y dejará la base de datos en blanco." 
+  confirmText="Sí, vaciar base de datos" 
+  (confirm)="executeDeleteAll()" 
+  (cancel)="cancelDeleteAll()">
+</app-confirm-modal>

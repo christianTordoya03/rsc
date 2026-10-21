@@ -57,21 +57,20 @@
               <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
             </td>
             <td class="p-4">
-              <div class="font-bold text-slate-700">{{ reg.estacion }}</div>
-              <div class="text-slate-400 text-xs uppercase">{{ reg.recorrido }}</div>
+              <div class="font-bold text-slate-700">{{ reg.estacion || 'No Registrada' }}</div>
+              <div class="text-slate-400 text-xs uppercase">{{ reg.recorrido || 'Cierre de Turno' }}</div>
             </td>
             <td class="p-4 text-center">
-              <div class="font-bold text-slate-800">{{ reg.odo_f - reg.odo_i }} Km</div>
-              <div class="text-slate-500 text-xs">{{ reg.galones }} gls.</div>
+              <div class="font-bold text-slate-800">{{ (reg.km_final || 0) - (reg.km_inicial || 0) }} Km</div>
+              <div class="text-slate-500 text-xs">{{ reg.galones || 0 }} gls.</div>
             </td>
             <td class="p-4 text-center">
-              <!-- Actualizado para sumar Peaje si existe -->
-              <div class="font-medium text-slate-800">S/ {{ ((reg.galones * reg.precio) + (reg.gasto_peaje || 0)) | number:'1.2-2' }}</div>
+              <div class="font-medium text-slate-800">S/ {{ ((reg.costo_total || 0) + (reg.gasto_peaje || 0)) | number:'1.2-2' }}</div>
               <div class="text-[10px] text-amber-600 font-bold" *ngIf="reg.gasto_peaje > 0">+ S/ {{reg.gasto_peaje}} Peaje</div>
             </td>
             <td class="p-4 text-center">
-              <span class="px-3 py-1 rounded-full text-xs font-bold" [ngClass]="((reg.odo_f - reg.odo_i)/reg.galones) >= 5 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
-                {{ ((reg.odo_f - reg.odo_i)/reg.galones) | number:'1.1-2' }} Km/gl
+              <span class="px-3 py-1 rounded-full text-xs font-bold" [ngClass]="(((reg.km_final || 0) - (reg.km_inicial || 0))/(reg.galones || 1)) >= 5 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+                {{ (((reg.km_final || 0) - (reg.km_inicial || 0))/(reg.galones || 1)) | number:'1.1-2' }} Km/gl
               </span>
             </td>
             <td class="p-4 text-right space-x-2">
@@ -89,7 +88,7 @@
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
-      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'EDITAR TICKET' : 'CONTROL DE KILOMETRAJE DIARIO' }}</h2>
+      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'COMPLETAR TICKET DEL CHOFER' : 'CONTROL DE KILOMETRAJE DIARIO' }}</h2>
       <button (click)="closeForm()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
@@ -100,6 +99,9 @@
           <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
           <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
             <option value="BSY-931">BSY-931</option><option value="AUH-927">AUH-927</option><option value="F6Z-867">F6Z-867</option><option value="BHI-940">BHI-940</option>
+            <option value="BBU-840">BBU-840</option><option value="ACK-826">ACK-826</option><option value="BHH-935">BHH-935</option><option value="BBT-751">BBT-751</option>
+            <option value="F4D-855">F4D-855</option><option value="AYJ-784">AYJ-784</option><option value="BAN-786">BAN-786</option><option value="B0L-756">B0L-756</option>
+            <option value="F4B-804">F4B-804</option><option value="BEL-713">BEL-713</option>
           </select>
         </div>
         <div>
@@ -108,8 +110,8 @@
             <option value="Primera vuelta">Primera vuelta</option><option value="Segunda vuelta">Segunda vuelta</option><option value="Adicional">Adicional</option>
           </select>
         </div>
-        <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1">ESTACIÓN</label><input type="text" formControlName="estacion" placeholder="Ej. PRIMAX REIMIJ SRL" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label><input type="text" formControlName="conductor" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1">ESTACIÓN GRIFO</label><input type="text" formControlName="estacion" placeholder="Opcional. Ej. PRIMAX REIMIJ SRL" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label><input type="text" formControlName="conductor" placeholder="Opcional" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
       </div>
 
       <!-- Cálculos Automáticos de Combustible -->

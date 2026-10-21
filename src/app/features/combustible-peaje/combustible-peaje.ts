@@ -22,7 +22,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
-  private supabase = inject(SupabaseService); // <-- CONEXIÓN A LA NUBE
+  private supabase = inject(SupabaseService); 
   
   showForm = false;
   isEditing = false;
@@ -32,7 +32,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
   recordToDelete: string | null = null;
   
   userId = '';
-  registros: any[] = []; // <-- ARREGLO VACÍO (YA NO HAY MOCKS)
+  registros: any[] = []; 
 
   // KPIs
   kpiOptimas = 0; kpiAlertas = 0; kpiGastoTotal = 0;
@@ -41,12 +41,12 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     fecha: ['', Validators.required],
     placa: ['', Validators.required],
     tipoRecorrido: ['Primera vuelta', Validators.required],
-    estacion: ['', Validators.required],
-    conductor: ['', Validators.required],
+    estacion: [''], // Opcional, el chofer no lo llena
+    conductor: [''], // Opcional, el chofer no lo llena
     odoInicial: [0, [Validators.required, Validators.min(0)]],
     odoFinal: [0, [Validators.required, Validators.min(0)]],
     galones: [0, [Validators.required, Validators.min(0.1)]],
-    precioGalon: [16.5, [Validators.required, Validators.min(0.1)]],
+    precioGalon: [0, [Validators.required, Validators.min(0.1)]],
     gasto_peaje: [0, [Validators.min(0)]],
     observaciones: ['']
   });
@@ -55,7 +55,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     const { data: { session } } = await this.supabase.auth.getSession();
     if (session) this.userId = session.user.id;
     
-    await this.cargarTickets(); // Carga real de base de datos
+    await this.cargarTickets(); 
 
     this.combustibleForm.valueChanges.subscribe(val => {
       if (!this.isEditing && this.showForm) {
@@ -84,6 +84,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     }
   }
 
+  // Se actualizan las variables para que coincidan con la base de datos real
   get kmRecorrido() { return Math.max(0, this.combustibleForm.value.odoFinal - this.combustibleForm.value.odoInicial); }
   get rendimiento() { return this.combustibleForm.value.galones > 0 ? (this.kmRecorrido / this.combustibleForm.value.galones) : 0; }
   get costoTotal() { return (this.combustibleForm.value.galones * this.combustibleForm.value.precioGalon) + (this.combustibleForm.value.gasto_peaje || 0); }
@@ -91,10 +92,10 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
   calcularKPIs() {
     this.kpiOptimas = 0; this.kpiAlertas = 0; this.kpiGastoTotal = 0;
     this.registros.forEach(r => {
-      const km = r.odo_f - r.odo_i;
-      const rend = r.galones > 0 ? km / r.galones : 0;
+      const km = (r.km_final || 0) - (r.km_inicial || 0);
+      const rend = (r.galones && r.galones > 0) ? km / r.galones : 0;
       if (rend >= 5) this.kpiOptimas++; else this.kpiAlertas++;
-      this.kpiGastoTotal += (r.galones * r.precio) + (r.gasto_peaje || 0);
+      this.kpiGastoTotal += (r.costo_total || 0) + (r.gasto_peaje || 0);
     });
   }
 
@@ -104,7 +105,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
     const ordenados = [...this.registros].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
     const labels = ordenados.map(r => `${r.fecha} (${r.placa})`);
-    const dataRendimiento = ordenados.map(r => (r.odo_f - r.odo_i) / r.galones);
+    const dataRendimiento = ordenados.map(r => ((r.km_final || 0) - (r.km_inicial || 0)) / (r.galones || 1));
 
     this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
       type: 'line',
@@ -127,17 +128,24 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
     try {
       const payloadCombustible = {
-        fecha: v.fecha, placa: v.placa, recorrido: v.tipoRecorrido, estacion: v.estacion,
-        conductor: v.conductor, odo_i: v.odoInicial, odo_f: v.odoFinal, galones: v.galones,
-        precio: v.precioGalon, gasto_peaje: v.gasto_peaje || 0, obs: v.observaciones, registrado_por: this.userId
+        fecha: v.fecha, 
+        placa: v.placa, 
+        recorrido: v.tipoRecorrido, 
+        estacion: v.estacion,
+        conductor: v.conductor, 
+        km_inicial: v.odoInicial,  // <-- Nombres correctos para la BD
+        km_final: v.odoFinal, 
+        galones: v.galones,
+        costo_total: v.galones * v.precioGalon, 
+        gasto_peaje: v.gasto_peaje || 0, 
+        observaciones: v.observaciones, 
+        registrado_por: this.userId
       };
 
       if (!this.isEditing) {
-        // 1. Guardar Combustible
         const { error: err1 } = await this.supabase.from('control_combustible').insert(payloadCombustible);
         if (err1) throw err1;
 
-        // 2. Guardar Peaje (Si hubo)
         if (v.gasto_peaje > 0) {
           const payloadPeaje = {
             fecha: v.fecha, placa: v.placa, ruta: v.tipoRecorrido, monto: v.gasto_peaje,
@@ -183,13 +191,28 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
   openForm(registro?: any) {
     if (registro) {
       this.isEditing = true; this.currentEditId = registro.id;
+      
+      // Calculamos el precio por galón a la inversa (Costo Total / Galones)
+      const precioCalculado = (registro.galones && registro.galones > 0) 
+        ? (registro.costo_total / registro.galones) 
+        : 0;
+
       this.combustibleForm.patchValue({
-        fecha: registro.fecha, placa: registro.placa, tipoRecorrido: registro.recorrido, estacion: registro.estacion, conductor: registro.conductor,
-        odoInicial: registro.odo_i, odoFinal: registro.odo_f, galones: registro.galones, precioGalon: registro.precio, gasto_peaje: registro.gasto_peaje, observaciones: registro.obs
+        fecha: registro.fecha, 
+        placa: registro.placa, 
+        tipoRecorrido: registro.recorrido || 'Primera vuelta', 
+        estacion: registro.estacion || '', 
+        conductor: registro.conductor || '',
+        odoInicial: registro.km_inicial || 0, 
+        odoFinal: registro.km_final || 0, 
+        galones: registro.galones || 0, 
+        precioGalon: parseFloat(precioCalculado.toFixed(2)), 
+        gasto_peaje: registro.gasto_peaje || 0, 
+        observaciones: registro.observaciones || ''
       }, { emitEvent: false });
     } else {
       this.isEditing = false; this.currentEditId = null;
-      this.combustibleForm.reset({ tipoRecorrido: 'Primera vuelta', odoInicial: 0, odoFinal: 0, galones: 0, precioGalon: 16.5, gasto_peaje: 0 }, { emitEvent: false });
+      this.combustibleForm.reset({ tipoRecorrido: 'Primera vuelta', odoInicial: 0, odoFinal: 0, galones: 0, precioGalon: 0, gasto_peaje: 0 }, { emitEvent: false });
       const draft = localStorage.getItem('combustible_draft');
       if (draft) this.combustibleForm.patchValue(JSON.parse(draft), { emitEvent: false });
     }
@@ -225,11 +248,11 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     worksheet.columns = [{ width: 6 }, { width: 12 }, { width: 10 }, { width: 25 }, { width: 20 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 10 }, { width: 15 }, { width: 14 }, { width: 12 }, { width: 30 }];
 
     this.registros.forEach((reg, index) => {
-      const rec = reg.odo_f - reg.odo_i;
-      const rend = reg.galones > 0 ? parseFloat((rec / reg.galones).toFixed(2)) : 0;
-      const costo = parseFloat((reg.galones * reg.precio).toFixed(2));
+      const rec = (reg.km_final || 0) - (reg.km_inicial || 0);
+      const rend = (reg.galones && reg.galones > 0) ? parseFloat((rec / reg.galones).toFixed(2)) : 0;
+      const costo = parseFloat((reg.costo_total || 0).toFixed(2));
       const peaje = reg.gasto_peaje ? parseFloat(reg.gasto_peaje.toString()).toFixed(2) : '0.00';
-      const row = worksheet.addRow([ index + 1, reg.fecha, reg.placa, reg.estacion, reg.conductor, reg.odo_i, reg.odo_f, rec, reg.galones, rend, costo, peaje, reg.obs ]);
+      const row = worksheet.addRow([ index + 1, reg.fecha, reg.placa, reg.estacion || 'No registrado', reg.conductor || 'No registrado', reg.km_inicial, reg.km_final, rec, reg.galones, rend, costo, peaje, reg.observaciones || '' ]);
       row.eachCell(c => { c.border = border; });
     });
 

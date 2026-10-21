@@ -22,11 +22,11 @@ export class VentasRetornos implements OnInit, AfterViewInit {
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
-  private supabase = inject(SupabaseService); // <-- CONEXIÓN A SUPABASE
+  private supabase = inject(SupabaseService); 
   
   showForm = false;
   isEditing = false;
-  isLoading = false; // <-- Para manejar estados de carga
+  isLoading = false; 
   currentEditId: string | null = null;
   
   showDeleteConfirm = false;
@@ -52,7 +52,7 @@ export class VentasRetornos implements OnInit, AfterViewInit {
   registros: any[] = [];
 
   async ngOnInit() {
-    await this.cargarDespachos(); // <-- CARGA DESDE LA BASE DE DATOS AL INICIAR
+    await this.cargarDespachos(); 
 
     this.ventasForm.valueChanges.subscribe(val => {
       if (!this.isEditing && this.showForm) {
@@ -67,29 +67,30 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     }, 100);
   }
 
-  // --- 1. FUNCIÓN PARA CARGAR DATOS REALES DE SUPABASE ---
   async cargarDespachos() {
     this.isLoading = true;
     try {
       const { data, error } = await this.supabase.from('despachos')
-        .select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
-        .eq('estado', 'COMPLETADO') // Solo trae los terminados
+        // Extraemos distrito del cliente si existe
+        .select(`*, clientes ( razon_social, distrito ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
+        .neq('estado', 'ANULADO') // Mostrar todo lo del día para que Logística sepa qué esperar
         .order('fecha_despacho', { ascending: false });
 
       if (error) throw error;
 
-      // Mapeamos los datos de la BD a las variables exactas que usa tu Excel y Gráficos
       this.registros = (data || []).map(d => ({
         id: d.id,
         fecha: d.fecha_despacho,
         placa: d.placa,
         conductor: d.perfiles?.nombre_completo || 'Sin operador',
         cliente: d.clientes?.razon_social || d.cliente_id || 'Desconocido',
-        distrito: d.distrito || '-',
+        distrito: d.clientes?.distrito || d.distrito || '-',
         condicion: 'P (Programado)',
+        estado: d.estado || 'PENDIENTE',
         p05: d.p05 || 0, p10: d.p10 || 0, p15: d.p15 || 0, p45: d.p45 || 0,
         v05: d.v05 || 0, v10: d.v10 || 0, v15: d.v15 || 0, v45: d.v45 || 0,
-        r05: d.r05 || 0, r10: d.r10 || 0, r15: d.r15 || 0, r45: d.r45 || 0,
+        // CORRECCIÓN CRÍTICA: La BD guarda en 'm' (merma), no en 'r' (retorno)
+        m05: d.m05 || 0, m10: d.m10 || 0, m15: d.m15 || 0, m45: d.m45 || 0, 
         obs: d.observaciones || ''
       }));
 
@@ -105,7 +106,7 @@ export class VentasRetornos implements OnInit, AfterViewInit {
   calcularKPIs() {
     this.kpiTotalProgramado = this.registros.reduce((acc, r) => acc + r.p05 + r.p10 + r.p15 + r.p45, 0);
     this.kpiTotalVenta = this.registros.reduce((acc, r) => acc + r.v05 + r.v10 + r.v15 + r.v45, 0);
-    this.kpiTotalRetorno = this.registros.reduce((acc, r) => acc + r.r05 + r.r10 + r.r15 + r.r45, 0);
+    this.kpiTotalRetorno = this.registros.reduce((acc, r) => acc + r.m05 + r.m10 + r.m15 + r.m45, 0);
   }
 
   actualizarGrafico() {
@@ -120,10 +121,10 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     ];
 
     const sumRetornos = [
-      this.registros.reduce((acc, r) => acc + r.r05, 0),
-      this.registros.reduce((acc, r) => acc + r.r10, 0),
-      this.registros.reduce((acc, r) => acc + r.r15, 0),
-      this.registros.reduce((acc, r) => acc + r.r45, 0)
+      this.registros.reduce((acc, r) => acc + r.m05, 0),
+      this.registros.reduce((acc, r) => acc + r.m10, 0),
+      this.registros.reduce((acc, r) => acc + r.m15, 0),
+      this.registros.reduce((acc, r) => acc + r.m45, 0)
     ];
 
     this.chartInstance = new Chart(this.comparativaChartRef.nativeElement, {
@@ -163,7 +164,8 @@ export class VentasRetornos implements OnInit, AfterViewInit {
         fecha: registro.fecha, placa: registro.placa, conductor: registro.conductor, distribuidor: registro.cliente, distrito: registro.distrito, condicion: registro.condicion,
         prog_05: registro.p05, prog_10: registro.p10, prog_15: registro.p15, prog_45: registro.p45,
         venta_05: registro.v05, venta_10: registro.v10, venta_15: registro.v15, venta_45: registro.v45,
-        ret_05: registro.r05, ret_10: registro.r10, ret_15: registro.r15, ret_45: registro.r45,
+        // Carga desde 'm' en lugar de 'r'
+        ret_05: registro.m05, ret_10: registro.m10, ret_15: registro.m15, ret_45: registro.m45,
         observaciones: registro.obs
       }, { emitEvent: false });
     } else {
@@ -184,7 +186,6 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     this.showDeleteConfirm = true;
   }
 
-  // --- 2. FUNCIÓN PARA ELIMINAR EN SUPABASE ---
   async executeDelete() {
     if (!this.recordToDelete) return;
     this.isLoading = true;
@@ -192,7 +193,7 @@ export class VentasRetornos implements OnInit, AfterViewInit {
       const { error } = await this.supabase.from('despachos').delete().eq('id', this.recordToDelete);
       if (error) throw error;
 
-      await this.cargarDespachos(); // Recargar datos actualizados
+      await this.cargarDespachos(); 
       this.toast.showSuccess('Registro eliminado de la base de datos'); 
       this.cancelDelete();
     } catch (error: any) {
@@ -207,22 +208,25 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     this.recordToDelete = null;
   }
 
-  // --- 3. FUNCIÓN PARA CREAR/ACTUALIZAR EN SUPABASE ---
   async onSubmit() {
     if (this.ventasForm.valid) {
       this.isLoading = true;
       const v = this.ventasForm.value;
 
-      // Preparamos los datos para la BD
+      const totalVendido = v.venta_05 + v.venta_10 + v.venta_15 + v.venta_45;
+      const totalMerma = v.ret_05 + v.ret_10 + v.ret_15 + v.ret_45;
+
       const payload = {
         fecha_despacho: v.fecha,
         placa: v.placa,
         distrito: v.distrito,
         p05: v.prog_05, p10: v.prog_10, p15: v.prog_15, p45: v.prog_45,
         v05: v.venta_05, v10: v.venta_10, v15: v.venta_15, v45: v.venta_45,
-        r05: v.ret_05, r10: v.ret_10, r15: v.ret_15, r45: v.ret_45,
+        m05: v.ret_05, m10: v.ret_10, m15: v.ret_15, m45: v.ret_45, // Se envía a la BD como 'm'
+        venta_real: totalVendido, // Mantiene el Dashboard al día
+        merma: totalMerma, // Mantiene el Dashboard al día
         observaciones: v.observaciones,
-        estado: 'COMPLETADO' // Se asegura de que se marque como completado
+        estado: 'COMPLETADO' // Almacén valida y cierra la ruta
       };
 
       try {
@@ -234,10 +238,10 @@ export class VentasRetornos implements OnInit, AfterViewInit {
         } else {
           const { error } = await this.supabase.from('despachos').update(payload).eq('id', this.currentEditId);
           if (error) throw error;
-          this.toast.showInfo('Registro actualizado correctamente');
+          this.toast.showInfo('Registro y Dashboard actualizados');
         }
         
-        await this.cargarDespachos(); // Refrescamos la vista
+        await this.cargarDespachos();
         this.closeForm();
       } catch (error: any) {
         this.toast.showError('Error al guardar: ' + error.message);
@@ -295,7 +299,8 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     worksheet.columns = [{ width: 12 }, { width: 30 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 }, { width: 12 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 35 }];
 
     this.registros.forEach(reg => {
-      const row = worksheet.addRow([reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, reg.p05, reg.p10, reg.p15, reg.p45, reg.v05, reg.v10, reg.v15, reg.v45, reg.r05, reg.r10, reg.r15, reg.r45, reg.obs]);
+      // Exportando reg.m05 en lugar de reg.r05
+      const row = worksheet.addRow([reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, reg.p05, reg.p10, reg.p15, reg.p45, reg.v05, reg.v10, reg.v15, reg.v45, reg.m05, reg.m10, reg.m15, reg.m45, reg.obs]);
       row.eachCell(cell => { cell.border = borderStyle; cell.alignment = { vertical: 'middle' }; });
     });
 

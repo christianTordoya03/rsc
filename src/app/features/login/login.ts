@@ -28,50 +28,57 @@ export class Login {
   }
 
   async onSubmit() {
-  if (this.loginForm.invalid) {
-    this.loginForm.markAllAsTouched();
-    return;
-  }
-
-  this.isLoading = true;
-  const documento = this.loginForm.value.documento.trim();
-  
-  // Usamos el documento tanto para el email como para la contraseña
-  const pseudoEmail = `${documento.toLowerCase()}@rscdiesel.com`;
-
-  try {
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email: pseudoEmail,
-      password: documento
-    });
-
-    if (error) throw error;
-
-    if (data.session) {
-      // SOLO pedimos rol y nombre_completo. ¡Nada de estado!
-      const { data: perfil, error: perfilError } = await this.supabase.from('perfiles')
-        .select('rol, nombre_completo')
-        .eq('id', data.session.user.id)
-        .single();
-
-      if (perfilError) throw perfilError;
-
-      this.toast.showSuccess(`Bienvenido, ${perfil?.nombre_completo?.split(' ')[0] || 'Usuario'}`);
-
-      // Redirección
-      const rol = perfil?.rol;
-      if (rol === 'ADMIN') {
-        this.router.navigate(['/ventas-retornos']);
-      } else if (rol === 'LOGISTICA') {
-        this.router.navigate(['/programacion-rutas']);
-      } else if (rol === 'OPERACIONES') {
-        this.router.navigate(['/operador']); 
-      }
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
     }
-  } catch (error: any) {
-    this.toast.showError('Acceso denegado. Documento incorrecto.');
-  } finally {
-    this.isLoading = false;
+
+    this.isLoading = true;
+    const documento = this.loginForm.value.documento.trim();
+    
+    // Usamos el documento tanto para el email como para la contraseña
+    const pseudoEmail = `${documento.toLowerCase()}@rscdiesel.com`;
+
+    try {
+      const { data, error } = await this.supabase.auth.signInWithPassword({
+        email: pseudoEmail,
+        password: documento
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        // SOLO pedimos rol y nombre_completo. ¡Nada de estado!
+        const { data: perfil, error: perfilError } = await this.supabase.from('perfiles')
+          .select('rol, nombre_completo')
+          .eq('id', data.session.user.id)
+          .single();
+
+        if (perfilError) throw perfilError;
+
+        const rol = perfil?.rol;
+        this.toast.showSuccess(`Bienvenido, ${perfil?.nombre_completo?.split(' ')[0] || 'Usuario'}`);
+
+        // REDIRECCIONES (Corregidas para coincidir con app.routes.ts)
+        if (rol === 'NOCTURNO' || documento === '47677704') {
+          this.router.navigate(['/operacion-nocturna']); // <- Nuevo nombre
+        } else if (rol === 'ADMIN') {
+          this.router.navigate(['/ventas-retornos']);
+        } else if (rol === 'LOGISTICA') {
+          this.router.navigate(['/programacion']); 
+        } else if (rol === 'OPERACIONES') {
+          this.router.navigate(['/operador']); 
+        } else {
+          // Si el rol en Supabase no es ninguno de los de arriba, no hará nada, pero avisará:
+          this.toast.showWarning(`Rol no reconocido: ${rol}`);
+          console.warn(`El rol '${rol}' no coincide con las opciones permitidas para redirección.`);
+        }
+      }
+    } catch (error: any) {
+      console.error('Error en Login:', error);
+      this.toast.showError('Acceso denegado. Documento incorrecto.');
+    } finally {
+      this.isLoading = false;
+    }
   }
-}
 }

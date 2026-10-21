@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router'; // Importaciones específicas
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,12 +12,12 @@ export class SidebarComponent {
   @Input() isOpen = false;
   @Output() closeSidebar = new EventEmitter<void>();
 
-  // Estructura de las 6 secciones solicitadas
+  // Estructura de las secciones con el nombre y ruta corregidos
   menuItems = [
     { path: '/dashboard', label: 'Panel Principal' },
     { path: '/ventas-retornos', label: 'Ventas y Retornos' },
     { path: '/control-combustible', label: 'Control Combustible' },
-    { path: '/productividad-nocturna', label: 'Venta Nocturna' },
+    { path: '/operacion-nocturna', label: 'Operación Nocturna' }, // <-- AQUÍ ESTÁ LA CORRECCIÓN
     { path: '/clientes', label: 'Clientes' },
     { path: '/usuarios', label: 'Usuarios' },
     { path: '/programacion', label: 'Programación de Rutas' },

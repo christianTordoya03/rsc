@@ -1,10 +1,14 @@
 <div class="flex h-screen overflow-hidden bg-slate-50 w-full">
   
-  <!-- Fondo oscuro para móviles cuando el menú está abierto -->
-  <div *ngIf="isSidebarOpen" (click)="toggleSidebar()" class="fixed inset-0 z-20 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity"></div>
+  <!-- Fondo oscuro para móviles: Se oculta si es NOCTURNO -->
+  <div *ngIf="isSidebarOpen && rolUsuario !== 'NOCTURNO'" 
+       (click)="toggleSidebar()" 
+       class="fixed inset-0 z-20 bg-slate-900/50 backdrop-blur-sm lg:hidden transition-opacity">
+  </div>
 
-  <!-- Menú Lateral: Clases estructurales en el host -->
+  <!-- Menú Lateral: Se oculta por completo si es NOCTURNO -->
   <app-sidebar 
+    *ngIf="rolUsuario !== 'NOCTURNO'"
     class="absolute z-30 h-full lg:relative lg:flex-shrink-0 lg:block lg:w-64 transition-transform"
     [isOpen]="isSidebarOpen" 
     (closeSidebar)="toggleSidebar()">

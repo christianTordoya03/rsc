@@ -3,7 +3,7 @@
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Ventas y Retornos</h1>
-      <p class="text-sm text-slate-500">Gestión de despachos diarios y mermas operativas</p>
+      <p class="text-sm text-slate-500">Gestión de despachos diarios y validación de almacén</p>
     </div>
     
     <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -79,6 +79,11 @@
               <td class="p-4">
                 <div class="font-bold text-[#4F46E5]">{{ reg.placa }}</div>
                 <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
+                <!-- ETIQUETA NUEVA DE ESTADO -->
+                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold"
+                      [ngClass]="reg.estado === 'COMPLETADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                  {{ reg.estado }}
+                </span>
               </td>
               <td class="p-4">
                 <div class="font-medium text-slate-800">{{ reg.cliente }}</div>
@@ -86,9 +91,10 @@
               </td>
               <td class="p-4 text-center font-medium">{{ reg.p05 + reg.p10 + reg.p15 + reg.p45 }}</td>
               <td class="p-4 text-center font-bold text-blue-600">{{ reg.v05 + reg.v10 + reg.v15 + reg.v45 }}</td>
-              <td class="p-4 text-center font-bold text-red-500">{{ reg.r05 + reg.r10 + reg.r15 + reg.r45 }}</td>
+              <!-- CAMBIADO: Antes sumaba r05, ahora suma m05 -->
+              <td class="p-4 text-center font-bold text-red-500">{{ reg.m05 + reg.m10 + reg.m15 + reg.m45 }}</td>
               <td class="p-4 text-right space-x-2">
-                <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded hover:bg-indigo-50 transition-colors" title="Editar">
+                <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded hover:bg-indigo-50 transition-colors" title="Editar / Liquidar">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </button>
                 <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded hover:bg-red-50 transition-colors" title="Eliminar">
@@ -108,7 +114,7 @@
   <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] lg:max-h-[85vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
       <h2 class="text-white text-lg font-bold tracking-wider">
-        {{ isEditing ? 'EDITAR REGISTRO' : 'REGISTRO: LISTA MAESTRA DE VENTAS' }}
+        {{ isEditing ? 'LIQUIDACIÓN DE ALMACÉN' : 'REGISTRO: LISTA MAESTRA DE VENTAS' }}
       </h2>
       <button (click)="closeForm()" class="text-slate-400 hover:text-white transition-colors focus:outline-none">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -123,11 +129,7 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
-          <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] focus:border-[#4F46E5]">
-            <option value="">Seleccione placa...</option>
-            <option value="ACK-826">ACK-826</option>
-            <option value="BBT-751">BBT-751</option>
-          </select>
+          <input type="text" formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm bg-slate-50 focus:ring-[#4F46E5] focus:border-[#4F46E5]">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label>
@@ -203,7 +205,7 @@
         Cancelar
       </button>
       <button (click)="onSubmit()" class="px-5 py-2.5 text-sm font-bold text-white bg-[#4F46E5] rounded-lg hover:bg-[#4338CA] shadow-sm transition-colors">
-        {{ isEditing ? 'Guardar Cambios' : 'Registrar Venta' }}
+        {{ isEditing ? 'Liquidar y Guardar' : 'Registrar Venta' }}
       </button>
     </div>
   </div>
