@@ -1,22 +1,28 @@
-<div class="space-y-6 relative h-full">
+<div class="space-y-6 relative h-full w-full overflow-x-hidden">
   <!-- Cabecera -->
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Operación Nocturna</h1>
-      <p class="text-sm text-slate-500">Registro de salidas, retornos e incidencias (GO-F-29)</p>
+      <p class="text-sm text-slate-500">Registro de salidas, retornos y control de personal (GO-F-29)</p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+      
+      <button (click)="abrirAsistencia()"
+        class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
+        title="Ver control de asistencias, faltas y tardanzas">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        Control de Personal
+      </button>
+
       <button (click)="openForm()"
-        class="bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2">
+        class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
         </svg>
         Nuevo Reporte
       </button>
-      <button (click)="exportarExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2" title="Exportar a Excel">
-  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-  Exportar Reporte
-</button>
     </div>
   </div>
 
@@ -25,89 +31,174 @@
     <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- Tabla Historial (Limpia) -->
+  <!-- Tabla Historial (Principal) -->
   <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <table class="w-full text-left border-collapse whitespace-nowrap">
-      <thead>
-        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-          <th class="p-4 font-semibold">Fecha Reporte</th>
-          <th class="p-4 font-semibold">Responsable del Turno</th>
-          <th class="p-4 font-semibold text-center">Resumen de Actividad</th>
-          <th class="p-4 font-semibold text-right">Acciones</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100 text-sm">
-        <tr *ngIf="registros.length === 0">
-          <td colspan="4" class="p-8 text-center text-slate-400">Aún no hay operaciones nocturnas registradas.</td>
-        </tr>
-        <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
-          <td class="p-4 font-bold text-[#4F46E5]">{{ reg.fecha }}</td>
-          <td class="p-4 font-medium text-slate-700">{{ reg.responsable }}</td>
-          <td class="p-4 text-center text-slate-500 text-xs bg-slate-50 rounded-lg">
-            {{ reg.datos_formulario?.cargas?.length || 0 }} salidas | {{ reg.datos_formulario?.descargas?.length || 0 }}
-            retornos
-          </td>
-          <td class="p-4 text-right space-x-2">
-            <button class="text-emerald-600 hover:text-emerald-800 p-2 bg-emerald-50 rounded" title="Descargar Excel">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-              </svg>
-            </button>
-            <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                </path>
-              </svg>
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse whitespace-nowrap">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+            <th class="p-4 font-semibold">Fecha Reporte</th>
+            <th class="p-4 font-semibold">Responsable del Turno</th>
+            <th class="p-4 font-semibold text-center">Resumen de Actividad</th>
+            <th class="p-4 font-semibold text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-sm">
+          <tr *ngIf="registros.length === 0">
+            <td colspan="4" class="p-8 text-center text-slate-400">Aún no hay operaciones nocturnas registradas.</td>
+          </tr>
+          <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
+            <td class="p-4 font-bold text-[#4F46E5]">{{ reg.fecha }}</td>
+            <td class="p-4 font-medium text-slate-700">{{ reg.responsable }}</td>
+            <td class="p-4 text-center text-slate-500 text-xs">
+              <div class="bg-slate-100 px-3 py-1.5 rounded-lg inline-block">
+                {{ reg.datos_formulario?.cargas?.length || 0 }} salidas | {{ reg.datos_formulario?.descargas?.length || 0 }} retornos
+              </div>
+              <div class="block mt-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                Personal en turno: {{ reg.datos_formulario?.colaboradores?.length || 0 }}
+              </div>
+            </td>
+            <td class="p-4 text-right space-x-2">
+              <!-- Botón del Ojito -->
+              <button (click)="verDetalle(reg)" class="text-slate-400 hover:text-blue-500 p-2 bg-slate-100 rounded transition-colors" title="Ver Detalle">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+              <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded transition-colors" title="Eliminar Reporte">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <!-- ============================================== -->
-<!-- MODAL REDISEÑADO (Limpio y Moderno)            -->
+<!-- MODAL DE CONTROL DE ASISTENCIA Y FALTAS        -->
 <!-- ============================================== -->
-<div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+<div *ngIf="showAsistenciaModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/70 backdrop-blur-sm">
+  <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+    <div class="bg-emerald-600 px-4 sm:px-6 py-4 flex items-center justify-between shrink-0">
+      <h2 class="text-white text-lg font-bold flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Panel de Control de Asistencia
+      </h2>
+      <button (click)="cerrarAsistencia()" class="text-emerald-100 hover:text-white bg-emerald-700/50 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+    </div>
+
+    <!-- Barra de Filtros (Búsqueda en Tiempo Real) -->
+    <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 shrink-0">
+      <div class="flex-1">
+        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mes de Evaluación</label>
+        <input type="month" [(ngModel)]="filtroMes" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-emerald-500">
+      </div>
+      <div class="flex-[2] relative">
+        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Buscar Empleado</label>
+        <div class="relative">
+          <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text" [(ngModel)]="filtroEmpleado" (ngModelChange)="generarReporteAsistencia()" placeholder="Escribe el nombre o DNI..." class="w-full pl-10 pr-4 py-2 rounded-lg border-slate-300 text-sm focus:ring-emerald-500 transition-all">
+        </div>
+      </div>
+      <div class="flex-1">
+        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filtrar Estado</label>
+        <select [(ngModel)]="filtroEstado" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm font-medium focus:ring-emerald-500">
+          <option value="Todos">Todos (Historial)</option>
+          <option value="Asistió">Solo Asistencias</option>
+          <option value="Falta">🚨 Solo Faltas</option>
+          <option value="Tardanza">⚠️ Solo Tardanzas</option>
+          <option value="Permiso">ℹ️ Permisos / Descansos</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button (click)="exportarAsistencia()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg> Descargar
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabla Filtrada -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
+      <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+        <thead>
+          <tr class="text-slate-400 text-[10px] uppercase border-b border-slate-200">
+            <th class="pb-2 font-bold px-2">Fecha</th>
+            <th class="pb-2 font-bold px-2">Colaborador / DNI</th>
+            <th class="pb-2 font-bold px-2">Estado</th>
+            <th class="pb-2 font-bold px-2 w-full">Observaciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr *ngIf="asistenciaConsolidada.length === 0">
+            <td colspan="4" class="py-10 text-center text-slate-400 font-medium">No se encontraron registros con estos filtros.</td>
+          </tr>
+          <tr *ngFor="let a of asistenciaConsolidada" class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-2 font-bold text-slate-600">{{ a.fecha }}</td>
+            <td class="py-3 px-2 text-slate-800 font-medium">{{ a.nombre }}</td>
+            <td class="py-3 px-2">
+              <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border"
+                [ngClass]="{
+                  'bg-green-50 text-green-700 border-green-200': a.estado === 'Asistió',
+                  'bg-red-50 text-red-700 border-red-200': a.estado === 'Falta',
+                  'bg-amber-50 text-amber-700 border-amber-200': a.estado === 'Tardanza',
+                  'bg-blue-50 text-blue-700 border-blue-200': a.estado === 'Permiso'
+                }">
+                {{ a.estado }}
+              </span>
+            </td>
+            <td class="py-3 px-2 text-slate-500 italic text-xs truncate max-w-xs" [title]="a.observaciones">{{ a.observaciones || '-' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================== -->
+<!-- MODAL DE FORMULARIO DE REGISTRO                -->
+<!-- ============================================== -->
+<div *ngIf="showForm" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-[#F8FAFC] w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[95vh]">
 
-    <div class="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-200">
-      <h2 class="text-slate-800 text-xl font-black">Registro de Operación Nocturna</h2>
-      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full"><svg
+    <div class="bg-white px-4 sm:px-6 py-4 flex items-center justify-between border-b border-slate-200 shrink-0">
+      <h2 class="text-slate-800 text-lg sm:text-xl font-black">Registro de Operación Nocturna</h2>
+      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"><svg
           class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg></button>
     </div>
 
-    <form [formGroup]="reporteForm" class="p-6 overflow-y-auto flex-1 space-y-8 custom-scrollbar">
-
+    <form [formGroup]="reporteForm" class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 sm:space-y-8 custom-scrollbar">
+      
       <!-- CABECERA -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Fecha del Turno</label>
+          <label class="block text-[10px] sm:text-xs font-bold text-slate-500 mb-2 uppercase">Fecha del Turno <span class="text-red-500">*</span></label>
           <input type="date" formControlName="fecha"
-            class="w-full rounded-xl border-slate-300 text-sm focus:ring-[#4F46E5] bg-slate-50">
+            class="w-full rounded-xl text-sm focus:ring-[#4F46E5] transition-colors"
+            [ngClass]="reporteForm.get('fecha')?.invalid && reporteForm.get('fecha')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300 bg-slate-50'">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Responsable de Registro</label>
+          <label class="block text-[10px] sm:text-xs font-bold text-slate-500 mb-2 uppercase">Responsable de Registro</label>
           <input type="text" formControlName="responsable"
             class="w-full rounded-xl border-slate-200 bg-slate-100 text-sm font-bold text-[#4F46E5]">
         </div>
       </div>
 
       <!-- SECCIÓN 1: CARGA -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-        <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">1. Salida de Unidades (Carga
-          Diaria)</h3>
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
+        <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">1. Salida de Unidades (Carga Diaria)</h3>
 
         <div class="overflow-x-auto" formArrayName="cargas">
           <table class="w-full text-left border-collapse whitespace-nowrap text-sm mb-4">
             <thead>
-              <tr class="text-slate-500 text-xs uppercase border-b border-slate-200">
-                <th class="pb-3 pr-2">Placa</th>
+              <tr class="text-slate-500 text-[10px] sm:text-xs uppercase border-b border-slate-200">
+                <th class="pb-3 pr-2">Placa <span class="text-red-500">*</span></th>
                 <th class="pb-3 px-2 text-center">Capacidad</th>
                 <th class="pb-3 px-2 text-center">5 Kg</th>
                 <th class="pb-3 px-2 text-center">10 Kg</th>
@@ -121,22 +212,25 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let c of cargas.controls; let i=index" [formGroupName]="i" class="border-b border-slate-50">
-                <td class="py-2 pr-2"><select formControlName="placa" class="w-28 text-xs rounded-lg border-slate-300">
+              <!-- ESTADO VACÍO CARGA -->
+              <tr *ngIf="cargas.controls.length === 0">
+                <td colspan="11" class="py-6 text-center text-slate-400 italic">No hay salidas registradas. Pulse el botón inferior para añadir una carga.</td>
+              </tr>
+              <tr *ngFor="let c of cargas.controls; let i=index" [formGroupName]="i" class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <td class="py-2 pr-2">
+                  <select formControlName="placa" class="w-28 text-xs rounded-lg transition-colors focus:ring-[#4F46E5]"
+                    [ngClass]="c.get('placa')?.invalid && c.get('placa')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300'">
                     <option value="" disabled selected>Placa...</option>
                     <option *ngFor="let u of unidades" [value]="u.placa">{{ u.placa }}</option>
-                  </select></td>
+                  </select>
+                </td>
                 <td class="py-2 px-1"><input formControlName="capacidad" type="number"
                     class="w-20 text-xs rounded-lg border-transparent bg-slate-100 text-center font-bold text-slate-600">
                 </td>
-                <td class="py-2 px-1"><input formControlName="p05" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p10" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p15" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p45" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
+                <td class="py-2 px-1"><input formControlName="p05" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p10" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p15" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p45" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
                 <td class="py-2 px-1"><input formControlName="total_kg" type="text"
                     class="w-20 text-xs rounded-lg border-transparent bg-indigo-50 text-center font-bold text-[#4F46E5]">
                 </td>
@@ -144,21 +238,17 @@
                     class="w-20 text-xs rounded-lg border-transparent bg-indigo-50 text-center font-black text-[#4F46E5]">
                 </td>
                 <td class="py-2 px-1"><input formControlName="constancia" type="text"
-                    class="w-24 text-xs rounded-lg border-slate-300" placeholder="N° Doc"></td>
+                    class="w-24 text-xs rounded-lg border-slate-300 focus:ring-[#4F46E5]" placeholder="N° Doc"></td>
                 <td class="py-2 px-1"><input formControlName="obs" type="text"
-                    class="w-32 text-xs rounded-lg border-slate-300" placeholder="..."></td>
+                    class="w-32 text-xs rounded-lg border-slate-300 focus:ring-[#4F46E5]" placeholder="..."></td>
                 <td class="py-2 pl-2 text-right"><button type="button" (click)="eliminarCarga(i)"
-                    class="text-slate-300 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                      </path>
-                    </svg></button></td>
+                    class="text-slate-300 hover:text-red-500 bg-white rounded-full p-1 shadow-sm border border-slate-100"><svg class="w-4 h-4" fill="none" stroke="currentColor"
+                      viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
               </tr>
             </tbody>
           </table>
           <button type="button" (click)="agregarCarga()"
-            class="text-sm font-bold text-[#4F46E5] hover:text-[#4338CA] flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-lg transition-colors"><svg
+            class="text-sm font-bold text-[#4F46E5] hover:text-[#4338CA] flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-4 py-2 rounded-lg transition-colors"><svg
               class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg> Añadir Camión a Carga</button>
@@ -166,15 +256,14 @@
       </div>
 
       <!-- SECCIÓN 2: DESCARGA -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-        <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">2. Retorno de Unidades
-          (Descarga)</h3>
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
+        <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">2. Retorno de Unidades (Descarga)</h3>
 
         <div class="overflow-x-auto" formArrayName="descargas">
           <table class="w-full text-left border-collapse whitespace-nowrap text-sm mb-4">
             <thead>
-              <tr class="text-slate-500 text-xs uppercase border-b border-slate-200">
-                <th class="pb-3 pr-2">Placa</th>
+              <tr class="text-slate-500 text-[10px] sm:text-xs uppercase border-b border-slate-200">
+                <th class="pb-3 pr-2">Placa <span class="text-red-500">*</span></th>
                 <th class="pb-3 px-2 w-32">Estado Cilindros</th>
                 <th class="pb-3 px-2 text-center w-16">5 Kg</th>
                 <th class="pb-3 px-2 text-center w-16">10 Kg</th>
@@ -185,116 +274,129 @@
               </tr>
             </thead>
             <tbody>
+              <!-- ESTADO VACÍO DESCARGA -->
+              <tr *ngIf="descargas.controls.length === 0">
+                <td colspan="8" class="py-6 text-center text-slate-400 italic">No hay retornos registrados en este turno. (Opcional)</td>
+              </tr>
               <tr *ngFor="let d of descargas.controls; let i=index" [formGroupName]="i"
-                class="border-b border-slate-50">
-                <td class="py-2 pr-2"><select formControlName="placa" class="w-32 text-xs rounded-lg border-slate-300">
+                class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <td class="py-2 pr-2">
+                  <select formControlName="placa" class="w-32 text-xs rounded-lg transition-colors focus:ring-[#4F46E5]"
+                    [ngClass]="d.get('placa')?.invalid && d.get('placa')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300'">
                     <option value="" disabled selected>Placa...</option>
                     <option *ngFor="let u of unidades" [value]="u.placa">{{ u.placa }}</option>
-                  </select></td>
+                  </select>
+                </td>
                 <td class="py-2 px-1"><select formControlName="estado"
-                    class="w-32 text-xs rounded-lg border-amber-200 bg-amber-50 text-amber-700 font-bold">
+                    class="w-32 text-xs rounded-lg border-amber-200 bg-amber-50 text-amber-700 font-bold focus:ring-amber-500">
                     <option *ngFor="let e of estadosCilindros" [value]="e">{{ e }}</option>
                   </select></td>
-                <td class="py-2 px-1"><input formControlName="p05" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p10" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p15" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
-                <td class="py-2 px-1"><input formControlName="p45" type="number" min="0"
-                    class="w-16 text-xs rounded-lg border-slate-300 text-center"></td>
+                <td class="py-2 px-1"><input formControlName="p05" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p10" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p15" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
+                <td class="py-2 px-1"><input formControlName="p45" type="number" min="0" class="w-16 text-xs rounded-lg border-slate-300 text-center focus:ring-[#4F46E5]"></td>
                 <td class="py-2 px-1"><input formControlName="comentarios" type="text"
-                    class="w-full text-xs rounded-lg border-slate-300" placeholder="Ej. 2 cilindros averiados..."></td>
+                    class="w-full text-xs rounded-lg border-slate-300 focus:ring-[#4F46E5]" placeholder="Ej. 2 averiados..."></td>
                 <td class="py-2 pl-2 text-right"><button type="button" (click)="eliminarDescarga(i)"
-                    class="text-slate-300 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor"
-                      viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                      </path>
-                    </svg></button></td>
+                    class="text-slate-300 hover:text-red-500 bg-white rounded-full p-1 shadow-sm border border-slate-100"><svg class="w-4 h-4" fill="none" stroke="currentColor"
+                      viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td>
               </tr>
             </tbody>
           </table>
           <button type="button" (click)="agregarDescarga()"
-            class="text-sm font-bold text-slate-600 hover:text-slate-800 flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-lg transition-colors"><svg
+            class="text-sm font-bold text-slate-600 hover:text-slate-800 flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-4 py-2 rounded-lg transition-colors"><svg
               class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg> Añadir Camión a Descarga</button>
         </div>
       </div>
 
-      <!-- SECCIÓN 3: TIEMPOS, INCIDENCIAS Y PERSONAL -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
-        <h3 class="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">3. Tiempos, Incidencias y Personal
-        </h3>
+      <!-- SECCIÓN 3: TIEMPOS Y PERSONAL -->
+      <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-6">
+        <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">3. Tiempos, Incidencias y Asistencia</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-100">
-          <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Hora Inicio (Carga)</label><input
-              type="time" formControlName="hora_inicio" class="w-full rounded-xl border-slate-300"></div>
-          <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Hora Fin (Carga)</label><input
-              type="time" formControlName="hora_fin" class="w-full rounded-xl border-slate-300"></div>
-          <div><label class="block text-xs font-bold text-[#4F46E5] mb-2 uppercase">Tiempo Total Empleado</label><input
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 bg-slate-50 p-4 sm:p-6 rounded-xl border border-slate-100">
+          <div><label class="block text-[10px] sm:text-xs font-bold text-slate-500 mb-2 uppercase">Hora Inicio (Carga)</label><input
+              type="time" formControlName="hora_inicio" class="w-full rounded-xl border-slate-300 focus:ring-[#4F46E5]"></div>
+          <div><label class="block text-[10px] sm:text-xs font-bold text-slate-500 mb-2 uppercase">Hora Fin (Carga)</label><input
+              type="time" formControlName="hora_fin" class="w-full rounded-xl border-slate-300 focus:ring-[#4F46E5]"></div>
+          <div class="sm:col-span-2 md:col-span-1"><label class="block text-[10px] sm:text-xs font-bold text-[#4F46E5] mb-2 uppercase">Tiempo Total Empleado</label><input
               type="text" formControlName="tiempo_total"
-              class="w-full rounded-xl border-indigo-200 bg-indigo-50 font-black text-[#4F46E5] text-center text-lg">
+              class="w-full rounded-xl border-indigo-200 bg-indigo-50 font-black text-[#4F46E5] text-center text-lg shadow-inner">
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Dificultades en
-              carga</label><textarea formControlName="dificultad_carga" rows="2"
-              class="w-full rounded-xl border-slate-300 bg-slate-50"></textarea></div>
-          <div><label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Dificultades inicio
-              operación</label><textarea formControlName="dificultad_operacion" rows="2"
-              class="w-full rounded-xl border-slate-300 bg-slate-50"></textarea></div>
-        </div>
+        <div formArrayName="colaboradores" class="pt-2">
+          <div class="flex items-center justify-between mb-4 bg-slate-800 text-white p-3 rounded-lg">
+            <label class="flex items-center gap-2 text-sm font-bold">
+              <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              Personal Trabajando en este Turno
+            </label>
+          </div>
 
-        <div formArrayName="colaboradores" class="pt-4 border-t border-slate-100">
-          <label class="block text-sm font-bold text-slate-800 mb-4">Personal en Turno (Asistencias /
-            Observaciones)</label>
+          <!-- ESTADO VACÍO PERSONAL -->
+          <div *ngIf="colaboradores.controls.length === 0" class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 border-dashed rounded-xl mb-4">
+             Nadie registrado. Pulse el botón inferior para añadir personal. (Opcional)
+          </div>
 
-          <!-- AQUÍ SE VE CLARO EL INPUT DEL NOMBRE DEL COLABORADOR -->
           <div *ngFor="let col of colaboradores.controls; let i=index" [formGroupName]="i"
-            class="flex flex-col sm:flex-row gap-4 mb-4 bg-slate-50 p-4 rounded-xl border border-slate-200 relative">
-            <div class="flex-1">
-              <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Nombre del Colaborador</label>
-              <!-- El input ahora tiene el atributo list="lista-empleados" -->
+            class="flex flex-col sm:flex-row gap-3 mb-4 bg-white shadow-sm p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors items-start sm:items-end">
+            
+            <div class="w-full sm:flex-[4]">
+              <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Colaborador / DNI <span class="text-red-500">*</span></label>
               <input formControlName="nombre" type="text" list="lista-empleados"
-                class="w-full rounded-lg border-slate-300 text-sm" placeholder="Escribe para buscar o selecciona...">
-
-              <!-- Datalist invisible que hace la magia del autocompletado en vivo -->
+                class="w-full rounded-lg text-sm focus:ring-[#4F46E5] transition-colors"
+                [ngClass]="col.get('nombre')?.invalid && col.get('nombre')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300 bg-slate-50'"
+                placeholder="Escribe o selecciona...">
               <datalist id="lista-empleados">
                 <option *ngFor="let emp of empleadosDB" [value]="emp"></option>
               </datalist>
             </div>
-            <div class="flex-[2]">
-              <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Observaciones del
-                Personal</label>
-              <input formControlName="observaciones" type="text" class="w-full rounded-lg border-slate-300 text-sm"
-                placeholder="Ej. Inasistencia, incidente leve, falta de EPP...">
+
+            <div class="w-full sm:flex-[3]">
+              <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Estado</label>
+              <select formControlName="estado" class="w-full rounded-lg border-slate-300 text-sm font-bold focus:ring-[#4F46E5]"
+                [ngClass]="{
+                  'text-green-600 bg-green-50': col.get('estado')?.value === 'Asistió',
+                  'text-red-600 bg-red-50': col.get('estado')?.value === 'Falta',
+                  'text-amber-600 bg-amber-50': col.get('estado')?.value === 'Tardanza',
+                  'text-blue-600 bg-blue-50': col.get('estado')?.value === 'Permiso'
+                }">
+                <option *ngFor="let est of estadosAsistencia" [value]="est">{{ est }}</option>
+              </select>
             </div>
-            <button type="button" (click)="eliminarColaborador(i)"
-              class="sm:absolute sm:top-2 sm:right-2 text-slate-300 hover:text-red-500 flex items-center justify-center p-2"><svg
-                class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                </path>
-              </svg></button>
+
+            <div class="w-full sm:flex-[5]">
+              <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Motivo / Observaciones <span class="font-normal lowercase">(Opcional)</span></label>
+              <input formControlName="observaciones" type="text" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"
+                placeholder="Ej. Llegó 30 min tarde...">
+            </div>
+
+            <div class="w-full sm:w-auto flex justify-end mt-2 sm:mt-0">
+              <button type="button" (click)="eliminarColaborador(i)"
+                class="text-slate-400 hover:text-white hover:bg-red-500 p-2.5 rounded-lg transition-colors border border-slate-200 hover:border-red-500 bg-slate-50 shadow-sm" title="Quitar colaborador">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
           </div>
+
           <button type="button" (click)="agregarColaborador()"
-            class="text-sm font-bold text-[#4F46E5] hover:text-[#4338CA] flex items-center gap-2 mt-2"><svg
+            class="text-sm font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-2 mt-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 px-4 py-2.5 rounded-lg transition-colors shadow-sm"><svg
               class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-            </svg> Añadir Registro de Personal</button>
+            </svg> Añadir Personal al Turno</button>
         </div>
       </div>
 
     </form>
 
-    <div class="bg-white px-8 py-5 border-t border-slate-200 flex justify-end gap-4 flex-shrink-0">
+    <div class="bg-white px-4 sm:px-8 py-4 sm:py-5 border-t border-slate-200 flex justify-end gap-3 sm:gap-4 flex-shrink-0">
       <button (click)="closeForm()"
-        class="px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">Cancelar</button>
+        class="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-bold text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl transition-colors">Cancelar</button>
       <button (click)="onSubmit()"
-        class="px-8 py-3 text-sm font-bold text-white bg-[#4F46E5] rounded-xl hover:bg-[#4338CA] shadow-md flex items-center gap-2 transition-transform hover:scale-[1.02]">
+        class="px-6 sm:px-8 py-2.5 sm:py-3 text-sm font-bold text-white bg-[#4F46E5] rounded-xl hover:bg-[#4338CA] shadow-md flex items-center gap-2 transition-transform hover:scale-[1.02]">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
@@ -308,22 +410,129 @@
   message="Este reporte se borrará permanentemente del historial." confirmText="Eliminar" (confirm)="executeDelete()"
   (cancel)="cancelDelete()"></app-confirm-modal>
 
+  <!-- ============================================== -->
+<!-- MODAL DE DETALLE DE OPERACIÓN (EL OJITO)       -->
+<!-- ============================================== -->
+<div *ngIf="showDetalleModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/70 backdrop-blur-sm">
+  <div class="bg-[#F8FAFC] w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
+    
+    <div class="bg-blue-600 px-4 sm:px-6 py-4 flex items-center justify-between shrink-0">
+      <h2 class="text-white text-lg font-bold flex items-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
+        Detalle de Operación Nocturna
+      </h2>
+      <button (click)="cerrarDetalle()" class="text-blue-100 hover:text-white bg-blue-700/50 p-2 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+    </div>
+
+    <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar" *ngIf="registroDetalleActual">
+      
+      <!-- INFO GENERAL -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div><p class="text-[10px] uppercase font-bold text-slate-500">Fecha del Turno</p><p class="font-bold text-slate-800">{{ registroDetalleActual.fecha }}</p></div>
+        <div><p class="text-[10px] uppercase font-bold text-slate-500">Responsable</p><p class="font-bold text-slate-800">{{ registroDetalleActual.responsable }}</p></div>
+        <div><p class="text-[10px] uppercase font-bold text-slate-500">Horario de Carga</p><p class="font-bold text-slate-800">{{ registroDetalleActual.datos_formulario?.hora_inicio || '--:--' }} a {{ registroDetalleActual.datos_formulario?.hora_fin || '--:--' }}</p></div>
+        <div><p class="text-[10px] uppercase font-bold text-slate-500">Tiempo Total</p><p class="font-bold text-[#4F46E5]">{{ registroDetalleActual.datos_formulario?.tiempo_total || '-' }}</p></div>
+      </div>
+      
+      <div *ngIf="registroDetalleActual.datos_formulario?.dificultad_carga" class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-sm">
+        <p class="text-[10px] uppercase font-bold text-amber-700 mb-1">Observaciones Operativas del Turno</p>
+        <p class="text-amber-900">{{ registroDetalleActual.datos_formulario.dificultad_carga }}</p>
+      </div>
+
+      <!-- CARGAS -->
+      <div>
+        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">1</span> Salidas de Unidades (Cargas)</h3>
+        <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+              <tr><th class="p-3">Placa</th><th class="p-3 text-center">5 Kg</th><th class="p-3 text-center">10 Kg</th><th class="p-3 text-center">15 Kg</th><th class="p-3 text-center">45 Kg</th><th class="p-3 text-center">Total Kg</th><th class="p-3 text-center">% Factor</th><th class="p-3 w-full">Observación</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngIf="!registroDetalleActual.datos_formulario?.cargas?.length"><td colspan="8" class="p-4 text-center text-slate-400 italic">No se registraron salidas.</td></tr>
+              <tr *ngFor="let c of registroDetalleActual.datos_formulario?.cargas" class="hover:bg-slate-50">
+                <td class="p-3 font-bold text-slate-700">{{ c.placa }}</td>
+                <td class="p-3 text-center">{{ c.p05 }}</td>
+                <td class="p-3 text-center">{{ c.p10 }}</td>
+                <td class="p-3 text-center">{{ c.p15 }}</td>
+                <td class="p-3 text-center">{{ c.p45 }}</td>
+                <td class="p-3 text-center font-bold text-indigo-600">{{ c.total_kg }}</td>
+                <td class="p-3 text-center font-bold text-slate-600">{{ c.factor_carga }}</td>
+                <td class="p-3 text-slate-500 text-xs">{{ c.obs || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- DESCARGAS -->
+      <div>
+        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">2</span> Retornos de Unidades (Descargas)</h3>
+        <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+              <tr><th class="p-3">Placa</th><th class="p-3">Estado</th><th class="p-3 text-center">5 Kg</th><th class="p-3 text-center">10 Kg</th><th class="p-3 text-center">15 Kg</th><th class="p-3 text-center">45 Kg</th><th class="p-3 w-full">Comentarios</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngIf="!registroDetalleActual.datos_formulario?.descargas?.length"><td colspan="7" class="p-4 text-center text-slate-400 italic">No se registraron retornos.</td></tr>
+              <tr *ngFor="let d of registroDetalleActual.datos_formulario?.descargas" class="hover:bg-slate-50">
+                <td class="p-3 font-bold text-slate-700">{{ d.placa }}</td>
+                <td class="p-3"><span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-1 rounded-lg text-[10px] uppercase font-bold">{{ d.estado }}</span></td>
+                <td class="p-3 text-center">{{ d.p05 }}</td>
+                <td class="p-3 text-center">{{ d.p10 }}</td>
+                <td class="p-3 text-center">{{ d.p15 }}</td>
+                <td class="p-3 text-center">{{ d.p45 }}</td>
+                <td class="p-3 text-slate-500 text-xs">{{ d.comentarios || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PERSONAL -->
+      <div>
+        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">3</span> Personal en Turno</h3>
+        <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
+              <tr><th class="p-3">Colaborador / DNI</th><th class="p-3">Estado</th><th class="p-3 w-full">Observaciones</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngIf="!registroDetalleActual.datos_formulario?.colaboradores?.length"><td colspan="3" class="p-4 text-center text-slate-400 italic">Nadie registrado en la asistencia de este turno.</td></tr>
+              <tr *ngFor="let p of registroDetalleActual.datos_formulario?.colaboradores" class="hover:bg-slate-50">
+                <td class="p-3 font-medium text-slate-800">{{ p.nombre }}</td>
+                <td class="p-3">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border"
+                    [ngClass]="{
+                      'bg-green-50 text-green-700 border-green-200': p.estado === 'Asistió',
+                      'bg-red-50 text-red-700 border-red-200': p.estado === 'Falta',
+                      'bg-amber-50 text-amber-700 border-amber-200': p.estado === 'Tardanza',
+                      'bg-blue-50 text-blue-700 border-blue-200': p.estado === 'Permiso'
+                    }">
+                    {{ p.estado }}
+                  </span>
+                </td>
+                <td class="p-3 text-slate-500 italic text-xs">{{ p.observaciones || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bg-white px-4 py-4 border-t border-slate-200 text-right shrink-0">
+      <button (click)="cerrarDetalle()" class="px-6 py-2.5 text-sm font-bold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition-colors shadow-sm">Cerrar Detalle</button>
+    </div>
+  </div>
+</div>
+
 <!-- CSS extra para el scroll -->
 <style>
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 </style>

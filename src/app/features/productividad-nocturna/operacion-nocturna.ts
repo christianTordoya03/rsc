@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { ToastService } from '../../core/services/toast';
 import { SupabaseService } from '../../core/services/supabase';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal';
@@ -9,7 +9,7 @@ import * as ExcelJS from 'exceljs';
 @Component({
   selector: 'app-operacion-nocturna',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmModalComponent],
   templateUrl: './operacion-nocturna.html'
 })
 export class OperacionNocturnaComponent implements OnInit {
@@ -18,6 +18,7 @@ export class OperacionNocturnaComponent implements OnInit {
   private supabase = inject(SupabaseService);
 
   showForm = false;
+  showAsistenciaModal = false;
   isLoading = false;
   registros: any[] = [];
   nombreResponsable = 'Cargando...'; 
@@ -25,7 +26,23 @@ export class OperacionNocturnaComponent implements OnInit {
   recordToDelete: string | null = null;
   reporteForm!: FormGroup;
 
-  empleadosDB: string[] = [];
+  filtroMes = new Date().toISOString().slice(0, 7); 
+  filtroEmpleado = '';
+  filtroEstado = 'Todos';
+  asistenciaConsolidada: any[] = [];
+
+  // Variables para el modal de Detalles
+  showDetalleModal = false;
+  registroDetalleActual: any = null;
+
+  empleadosDB: string[] = [
+    'YAHUANA CORDOVA YAMPIER DAVID / DNI: 62727297',
+    'RÍOS CUMARI ELTON / DNI: 76559442',
+    'LOPEZ CASTILLO ELVES ABEL / DNI: 74211559',
+    'PINO MENENDEZ MARIANO ANDERSON'
+  ];
+
+  estadosAsistencia = ['Asistió', 'Falta', 'Tardanza', 'Permiso'];
 
   unidades = [
     { placa: 'AYJ-784', capacidad: 3750 }, { placa: 'F4D-855', capacidad: 1750 },
@@ -41,17 +58,7 @@ export class OperacionNocturnaComponent implements OnInit {
   async ngOnInit() {
     this.inicializarFormulario();
     await this.obtenerUsuario();
-    await this.cargarEmpleados();
     await this.cargarHistorial();
-  }
-
-  async cargarEmpleados() {
-    // Traemos a todos los usuarios registrados (puedes filtrar por rol si deseas)
-    const { data, error } = await this.supabase.from('perfiles').select('nombre_completo');
-    if (data && !error) {
-      // Guardamos solo los nombres válidos
-      this.empleadosDB = data.map(p => p.nombre_completo).filter(nombre => nombre);
-    }
   }
 
   async obtenerUsuario() {
@@ -115,9 +122,12 @@ export class OperacionNocturnaComponent implements OnInit {
   }
   eliminarDescarga(i: number) { this.descargas.removeAt(i); }
 
-  // AHORA EL COLABORADOR TIENE NOMBRE Y OBSERVACIONES CLARAS
   agregarColaborador() {
-    this.colaboradores.push(this.fb.group({ nombre: ['', Validators.required], observaciones: [''] }));
+    this.colaboradores.push(this.fb.group({ 
+      nombre: ['', Validators.required], 
+      estado: ['Asistió', Validators.required], 
+      observaciones: [''] 
+    }));
   }
   eliminarColaborador(i: number) { this.colaboradores.removeAt(i); }
 
@@ -135,7 +145,7 @@ export class OperacionNocturnaComponent implements OnInit {
   openForm() {
     this.inicializarFormulario();
     this.obtenerUsuario();
-    this.agregarCarga(); this.agregarDescarga();
+    this.agregarCarga(); 
     this.showForm = true;
   }
   closeForm() { this.showForm = false; }
@@ -146,21 +156,47 @@ export class OperacionNocturnaComponent implements OnInit {
       const { data, error } = await this.supabase.from('productividad_nocturna').select('*').order('fecha', { ascending: false });
       if (error && error.code !== '42P01') throw error;
       this.registros = data || [];
-    } catch (e) { this.toast.showError('Error al cargar.'); } finally { this.isLoading = false; }
+    } catch (e) { this.toast.showError('Error al cargar historial.'); } finally { this.isLoading = false; }
   }
 
   async onSubmit() {
+    if (this.cargas.length === 0) {
+      return this.toast.showError('Debe registrar al menos una Salida de Unidad (Carga).');
+    }
+
     if (this.reporteForm.invalid) {
       this.reporteForm.markAllAsTouched();
-      return this.toast.showError('Complete los campos obligatorios.');
+      return this.toast.showError('Complete los campos obligatorios en rojo.');
     }
+    
     this.isLoading = true;
     try {
-      const payload = { fecha: this.reporteForm.getRawValue().fecha, responsable: this.nombreResponsable, datos_formulario: this.reporteForm.getRawValue() };
-      await this.supabase.from('productividad_nocturna').insert(payload);
-      this.toast.showSuccess('Operación registrada.');
-      this.closeForm(); await this.cargarHistorial();
-    } catch (e:any) { this.toast.showError('Error: ' + e.message); } finally { this.isLoading = false; }
+      const rawForm = this.reporteForm.getRawValue();
+
+      // Consolidamos todas las placas para cumplir con el NOT NULL de Supabase
+      const placasCarga = rawForm.cargas.map((c: any) => c.placa).filter(Boolean);
+      const placasDescarga = rawForm.descargas.map((d: any) => d.placa).filter(Boolean);
+      const placasUnicas = Array.from(new Set([...placasCarga, ...placasDescarga])).join(' / ') || 'SIN PLACA';
+
+      const payload = { 
+        fecha: rawForm.fecha, 
+        responsable: this.nombreResponsable, 
+        placa: placasUnicas, 
+        // ❌ Se eliminó la propiedad "estado" que causaba el conflicto
+        datos_formulario: rawForm 
+      };
+
+      const { error } = await this.supabase.from('productividad_nocturna').insert(payload);
+      if (error) throw error;
+
+      this.toast.showSuccess('Operación registrada exitosamente.');
+      this.closeForm(); 
+      await this.cargarHistorial();
+    } catch (e:any) { 
+      this.toast.showError('Error de Base de Datos: ' + e.message); 
+    } finally { 
+      this.isLoading = false; 
+    }
   }
 
   confirmDelete(id: string) { this.recordToDelete = id; this.showDeleteConfirm = true; }
@@ -168,52 +204,92 @@ export class OperacionNocturnaComponent implements OnInit {
   async executeDelete() {
     if (!this.recordToDelete) return;
     this.isLoading = true;
-    await this.supabase.from('productividad_nocturna').delete().eq('id', this.recordToDelete);
-    this.cancelDelete(); await this.cargarHistorial();
+    const { error } = await this.supabase.from('productividad_nocturna').delete().eq('id', this.recordToDelete);
+    if (error) this.toast.showError('Error al eliminar: ' + error.message);
+    else this.toast.showSuccess('Reporte eliminado.');
+    
+    this.cancelDelete(); 
+    await this.cargarHistorial();
     this.isLoading = false;
   }
 
-  async exportarExcel() {
-    // CAMBIA 'this.registros' POR EL ARRAY QUE USES EN ESTE MÓDULO
-    if (!this.registros || this.registros.length === 0) {
-      this.toast.showWarning('No hay datos para exportar.');
+  // ===============================================
+  // MÓDULO DE CONTROL DE ASISTENCIA Y FALTAS
+  // ===============================================
+  abrirAsistencia() {
+    this.showAsistenciaModal = true;
+    this.generarReporteAsistencia();
+  }
+
+  cerrarAsistencia() {
+    this.showAsistenciaModal = false;
+  }
+
+  generarReporteAsistencia() {
+    this.asistenciaConsolidada = [];
+    
+    this.registros.forEach((reg: any) => {
+      if (this.filtroMes && !reg.fecha.startsWith(this.filtroMes)) return;
+
+      const personal = reg.datos_formulario?.colaboradores || [];
+      
+      personal.forEach((p: any) => {
+        const term = this.filtroEmpleado.toLowerCase().trim();
+        if (term && !p.nombre.toLowerCase().includes(term)) return;
+        
+        if (this.filtroEstado !== 'Todos' && p.estado !== this.filtroEstado) return;
+
+        this.asistenciaConsolidada.push({
+          fecha: reg.fecha,
+          responsable: reg.responsable,
+          nombre: p.nombre,
+          estado: p.estado || 'Asistió',
+          observaciones: p.observaciones || ''
+        });
+      });
+    });
+
+    this.asistenciaConsolidada.sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }
+
+  async exportarAsistencia() {
+    if (this.asistenciaConsolidada.length === 0) {
+      this.toast.showWarning('No hay datos en la tabla para exportar.');
       return;
     }
 
-    this.toast.showInfo('Generando reporte de Operación Nocturna...');
+    this.toast.showInfo('Generando Excel de Asistencia...');
     
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Operación Nocturna');
+      const worksheet = workbook.addWorksheet('Control de Personal');
 
-      // Ajusta las columnas según lo que necesites mostrar en este reporte
       worksheet.columns = [
-        { header: 'FECHA', key: 'fecha', width: 15 },
-        { header: 'PLACA', key: 'placa', width: 15 },
-        { header: 'CLIENTE', key: 'cliente', width: 45 },
+        { header: 'FECHA TURNO', key: 'fecha', width: 15 },
+        { header: 'EMPLEADO', key: 'nombre', width: 45 },
         { header: 'ESTADO', key: 'estado', width: 15 },
-        { header: '05 KG', key: 'p05', width: 10 },
-        { header: '10 KG', key: 'p10', width: 10 },
-        { header: '15 KG', key: 'p15', width: 10 },
-        { header: '45 KG', key: 'p45', width: 10 },
-        { header: 'OBSERVACIÓN', key: 'observacion', width: 25 }
+        { header: 'OBSERVACIONES / DETALLE', key: 'observaciones', width: 40 },
+        { header: 'REPORTADO POR', key: 'responsable', width: 30 }
       ];
 
       worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
       worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } };
 
-      this.registros.forEach((r: any) => {
-        worksheet.addRow({
-          fecha: r.fecha_despacho,
-          placa: r.placa,
-          cliente: r.clientes?.razon_social || r.cliente_nombre || 'Sin cliente',
+      this.asistenciaConsolidada.forEach(r => {
+        const row = worksheet.addRow({
+          fecha: r.fecha,
+          nombre: r.nombre,
           estado: r.estado,
-          p05: r.p05 || 0,
-          p10: r.p10 || 0,
-          p15: r.p15 || 0,
-          p45: r.p45 || 0,
-          observacion: r.observacion || ''
+          observaciones: r.observaciones,
+          responsable: r.responsable
         });
+
+        const estadoCell = row.getCell('estado');
+        estadoCell.font = { bold: true };
+        if (r.estado === 'Falta') estadoCell.font.color = { argb: 'FFDC2626' }; 
+        else if (r.estado === 'Tardanza') estadoCell.font.color = { argb: 'FFD97706' }; 
+        else if (r.estado === 'Permiso') estadoCell.font.color = { argb: 'FF2563EB' }; 
+        else estadoCell.font.color = { argb: 'FF16A34A' }; 
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
@@ -221,7 +297,95 @@ export class OperacionNocturnaComponent implements OnInit {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Operacion_Nocturna_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Asistencia_Nocturna_${this.filtroMes}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      this.toast.showSuccess(`Excel exportado con ${this.asistenciaConsolidada.length} registros.`);
+    } catch (error) {
+      this.toast.showError('Error al exportar el archivo');
+    }
+  }
+
+  // ===============================================
+  // EXPORTADOR DEL REPORTE OPERATIVO (CORREGIDO PARA JSON MULTIPLE)
+  // ===============================================
+  async exportarExcel() {
+    if (!this.registros || this.registros.length === 0) {
+      this.toast.showWarning('No hay datos operativos para exportar.');
+      return;
+    }
+
+    this.toast.showInfo('Generando reporte logístico...');
+    try {
+      const workbook = new ExcelJS.Workbook();
+      
+      // Pestaña 1: CARGAS
+      const wsCargas = workbook.addWorksheet('Salidas (Cargas)');
+      wsCargas.columns = [
+        { header: 'FECHA TURNO', key: 'fecha', width: 15 },
+        { header: 'RESPONSABLE', key: 'responsable', width: 25 },
+        { header: 'PLACA', key: 'placa', width: 15 },
+        { header: 'CAPACIDAD', key: 'capacidad', width: 15 },
+        { header: '05 KG', key: 'p05', width: 10 },
+        { header: '10 KG', key: 'p10', width: 10 },
+        { header: '15 KG', key: 'p15', width: 10 },
+        { header: '45 KG', key: 'p45', width: 10 },
+        { header: 'TOTAL KG', key: 'total_kg', width: 15 },
+        { header: '% FACTOR', key: 'factor', width: 15 },
+        { header: 'CONSTANCIA', key: 'constancia', width: 15 },
+        { header: 'OBSERVACIÓN', key: 'obs', width: 25 }
+      ];
+      wsCargas.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      wsCargas.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } };
+
+      // Pestaña 2: DESCARGAS
+      const wsDescargas = workbook.addWorksheet('Retornos (Descargas)');
+      wsDescargas.columns = [
+        { header: 'FECHA TURNO', key: 'fecha', width: 15 },
+        { header: 'RESPONSABLE', key: 'responsable', width: 25 },
+        { header: 'PLACA', key: 'placa', width: 15 },
+        { header: 'ESTADO', key: 'estado', width: 15 },
+        { header: '05 KG', key: 'p05', width: 10 },
+        { header: '10 KG', key: 'p10', width: 10 },
+        { header: '15 KG', key: 'p15', width: 10 },
+        { header: '45 KG', key: 'p45', width: 10 },
+        { header: 'COMENTARIOS', key: 'comentarios', width: 25 }
+      ];
+      wsDescargas.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      wsDescargas.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E1B4B' } };
+
+      this.registros.forEach((r: any) => {
+        const f = r.datos_formulario;
+        if (f?.cargas) {
+          f.cargas.forEach((c: any) => {
+            wsCargas.addRow({
+              fecha: r.fecha, responsable: r.responsable,
+              placa: c.placa, capacidad: c.capacidad,
+              p05: c.p05, p10: c.p10, p15: c.p15, p45: c.p45,
+              total_kg: c.total_kg, factor: c.factor_carga,
+              constancia: c.constancia, obs: c.obs
+            });
+          });
+        }
+        if (f?.descargas) {
+          f.descargas.forEach((d: any) => {
+            wsDescargas.addRow({
+              fecha: r.fecha, responsable: r.responsable,
+              placa: d.placa, estado: d.estado,
+              p05: d.p05, p10: d.p10, p15: d.p15, p45: d.p45,
+              comentarios: d.comentarios
+            });
+          });
+        }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Operacion_Nocturna_Logistica_${new Date().toISOString().split('T')[0]}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
       
@@ -229,5 +393,16 @@ export class OperacionNocturnaComponent implements OnInit {
     } catch (error) {
       this.toast.showError('Error al exportar el archivo');
     }
+  }
+
+    // Funciones para abrir y cerrar
+  verDetalle(registro: any) {
+    this.registroDetalleActual = registro;
+    this.showDetalleModal = true;
+  }
+
+  cerrarDetalle() {
+    this.showDetalleModal = false;
+    this.registroDetalleActual = null;
   }
 }
