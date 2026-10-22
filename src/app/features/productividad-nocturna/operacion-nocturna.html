@@ -1,80 +1,153 @@
-<div class="space-y-6 relative h-full w-full overflow-x-hidden">
-  <!-- Cabecera -->
+<div class="space-y-6 relative h-full w-full overflow-x-hidden p-2 sm:p-4">
+  
+  <!-- CABECERA (IGUAL AL DISEÑO VENTAS Y RETORNOS) -->
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-slate-800">Operación Nocturna</h1>
+      <h1 class="text-2xl font-bold text-[#1e293b]">Operación Nocturna</h1>
       <p class="text-sm text-slate-500">Registro de salidas, retornos y control de personal (GO-F-29)</p>
     </div>
     <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
       
-      <button (click)="abrirAsistencia()"
-        class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2"
-        title="Ver control de asistencias, faltas y tardanzas">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-        </svg>
-        Control de Personal
+      <button (click)="exportarExcel()" class="flex-1 sm:flex-none bg-[#10b981] hover:bg-[#059669] text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2" title="Exportar Excel">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Exportar Excel
       </button>
 
-      <button (click)="openForm()"
-        class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-        </svg>
-        Nuevo Reporte
+      <button (click)="abrirAsistencia()" class="flex-1 sm:flex-none border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        Asistencia
+      </button>
+
+      <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#6366f1] hover:bg-[#4f46e5] text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        Registrar Operación
       </button>
     </div>
   </div>
 
-  <div *ngIf="isLoading"
-    class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
+  <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
     <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- Tabla Historial (Principal) -->
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse whitespace-nowrap">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-            <th class="p-4 font-semibold">Fecha Reporte</th>
-            <th class="p-4 font-semibold">Responsable del Turno</th>
-            <th class="p-4 font-semibold text-center">Resumen de Actividad</th>
-            <th class="p-4 font-semibold text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100 text-sm">
-          <tr *ngIf="registros.length === 0">
-            <td colspan="4" class="p-8 text-center text-slate-400">Aún no hay operaciones nocturnas registradas.</td>
-          </tr>
-          <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
-            <td class="p-4 font-bold text-[#4F46E5]">{{ reg.fecha }}</td>
-            <td class="p-4 font-medium text-slate-700">{{ reg.responsable }}</td>
-            <td class="p-4 text-center text-slate-500 text-xs">
-              <div class="bg-slate-100 px-3 py-1.5 rounded-lg inline-block">
-                {{ reg.datos_formulario?.cargas?.length || 0 }} salidas | {{ reg.datos_formulario?.descargas?.length || 0 }} retornos
-              </div>
-              <div class="block mt-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Personal en turno: {{ reg.datos_formulario?.colaboradores?.length || 0 }}
-              </div>
-            </td>
-            <td class="p-4 text-right space-x-2">
-              <!-- Botón del Ojito -->
-              <button (click)="verDetalle(reg)" class="text-slate-400 hover:text-blue-500 p-2 bg-slate-100 rounded transition-colors" title="Ver Detalle">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                </svg>
-              </button>
-              <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded transition-colors" title="Eliminar Reporte">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- ESTRUCTURA PRINCIPAL (GRID COMO LA IMAGEN) -->
+  <div class="flex flex-col xl:flex-row gap-6">
+    
+    <!-- COLUMNA IZQUIERDA (1/3) -->
+    <div class="w-full xl:w-[35%] space-y-6">
+      
+      <!-- TARJETA TOTAL SALIDAS -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex justify-between items-center">
+        <div>
+          <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">TOTAL SALIDAS (Cargas)</h3>
+          <p class="text-4xl font-black text-slate-800">{{ dashTotalSalidas }}</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+        </div>
+      </div>
+
+      <!-- TARJETA GRÁFICO (Estructura blindada para html2canvas) -->
+      <div id="grafica-nocturna" class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col" style="min-height: 420px;">
+        <h3 class="text-xs font-bold text-slate-800 uppercase mb-4">KG DESPACHADOS (ÚLTIMOS DÍAS)</h3>
+        
+        <div class="flex justify-end gap-4 mb-6 text-[10px] font-bold">
+           <div class="flex items-center gap-1.5 text-slate-500"><div class="w-6 h-3 bg-[#6366f1] rounded-sm"></div> Volumen Kg</div>
+        </div>
+
+        <!-- 1. CONTENEDOR DE BARRAS (Altura exacta) -->
+        <div class="relative h-[240px] flex items-end gap-2 w-full">
+          <!-- Líneas de fondo -->
+          <div class="absolute inset-0 flex flex-col justify-between z-0 pointer-events-none">
+             <div class="border-t border-slate-100 w-full"></div>
+             <div class="border-t border-slate-100 w-full"></div>
+             <div class="border-t border-slate-100 w-full"></div>
+             <div class="border-t border-slate-100 w-full"></div>
+             <div class="border-t border-slate-100 w-full"></div>
+             <div class="border-t border-slate-300 w-full"></div> <!-- Línea base gruesa -->
+          </div>
+          
+          <div *ngIf="dashDataDias.length === 0" class="absolute inset-0 flex justify-center items-center text-slate-400 italic text-sm z-10">Sin datos</div>
+
+          <!-- Solo las Barras -->
+          <div *ngFor="let dia of dashDataDias" class="flex-1 flex justify-center items-end h-full z-10 group relative">
+             <div class="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
+               {{ dia.kg | number }} Kg
+             </div>
+             <div class="w-full max-w-[40px] bg-[#6366f1] rounded-t-sm transition-all duration-700 ease-out group-hover:bg-[#4f46e5]" [style.height]="dia.porcentaje + '%'"></div>
+          </div>
+        </div>
+
+        <!-- 2. CONTENEDOR DE FECHAS (Independiente y a salvo de recortes) -->
+        <div class="flex gap-2 w-full mt-3">
+          <div *ngFor="let dia of dashDataDias" class="flex-1 text-center">
+             <span class="text-[11px] text-slate-500 font-bold block">{{ dia.fechaCorto }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA (2/3) -->
+    <div class="w-full xl:w-[65%] space-y-6">
+      
+      <!-- TARJETAS SUPERIORES -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
+          <div>
+            <h3 class="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider mb-1">TOTAL KG MOVIDOS</h3>
+            <p class="text-3xl font-black text-[#6366f1]">{{ dashTotalKg | number }}</p>
+          </div>
+          <div class="p-3 bg-indigo-50 rounded-lg text-indigo-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
+          <div>
+            <h3 class="text-[11px] font-bold text-[#ef4444] uppercase tracking-wider mb-1">TOTAL RETORNOS</h3>
+            <p class="text-3xl font-black text-[#ef4444]">{{ dashTotalRetornos }}</p>
+          </div>
+          <div class="p-3 bg-red-50 rounded-lg text-red-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg></div>
+        </div>
+      </div>
+
+      <!-- TABLA PRINCIPAL AL ESTILO "VENTAS Y RETORNOS" -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
+                <th class="p-4 w-1/4">Fecha / Turno</th>
+                <th class="p-4 w-2/4">Responsable</th>
+                <th class="p-4 text-center">Salidas</th>
+                <th class="p-4 text-center text-[#ef4444]">Retornos</th>
+                <th class="p-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-sm">
+              <tr *ngIf="registros.length === 0"><td colspan="5" class="p-8 text-center text-slate-400">Aún no hay operaciones registradas.</td></tr>
+              
+              <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
+                <td class="p-4">
+                  <div class="font-bold text-[#6366f1] mb-1">{{ reg.fecha }}</div>
+                  <span class="px-2 py-0.5 bg-amber-100 text-amber-700 border border-amber-200 rounded text-[10px] font-bold uppercase">NOCTURNA</span>
+                </td>
+                <td class="p-4">
+                  <div class="font-medium text-slate-800">{{ reg.responsable }}</div>
+                  <div class="text-[10px] text-slate-400 mt-1 uppercase">Personal Asistente: {{ reg.datos_formulario?.colaboradores?.length || 0 }}</div>
+                </td>
+                <td class="p-4 text-center font-bold text-slate-700">{{ reg.datos_formulario?.cargas?.length || 0 }}</td>
+                <td class="p-4 text-center font-bold text-[#ef4444]">{{ reg.datos_formulario?.descargas?.length || 0 }}</td>
+                <td class="p-4 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button (click)="verDetalle(reg)" class="p-1.5 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
+                    <button (click)="editarOperacion(reg)" class="p-1.5 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                    <button (click)="confirmDelete(reg.id)" class="p-1.5 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -92,7 +165,6 @@
       <button (click)="cerrarAsistencia()" class="text-emerald-100 hover:text-white bg-emerald-700/50 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
-    <!-- Barra de Filtros (Búsqueda en Tiempo Real) -->
     <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 shrink-0">
       <div class="flex-1">
         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mes de Evaluación</label>
@@ -122,7 +194,6 @@
       </div>
     </div>
 
-    <!-- Tabla Filtrada -->
     <div class="flex-1 overflow-y-auto custom-scrollbar p-4">
       <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
         <thead>
@@ -160,17 +231,18 @@
 </div>
 
 <!-- ============================================== -->
-<!-- MODAL DE FORMULARIO DE REGISTRO                -->
+<!-- MODAL DE FORMULARIO DE REGISTRO / EDICIÓN      -->
 <!-- ============================================== -->
 <div *ngIf="showForm" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-[#F8FAFC] w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[95vh]">
 
     <div class="bg-white px-4 sm:px-6 py-4 flex items-center justify-between border-b border-slate-200 shrink-0">
-      <h2 class="text-slate-800 text-lg sm:text-xl font-black">Registro de Operación Nocturna</h2>
-      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"><svg
-          class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-        </svg></button>
+      <h2 class="text-slate-800 text-lg sm:text-xl font-black flex items-center gap-2">
+        <svg *ngIf="!isEditing" class="w-6 h-6 text-[#6366f1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <svg *ngIf="isEditing" class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+        {{ isEditing ? 'Editar Operación Nocturna' : 'Nuevo Registro de Operación' }}
+      </h2>
+      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
     <form [formGroup]="reporteForm" class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 sm:space-y-8 custom-scrollbar">
@@ -212,7 +284,6 @@
               </tr>
             </thead>
             <tbody>
-              <!-- ESTADO VACÍO CARGA -->
               <tr *ngIf="cargas.controls.length === 0">
                 <td colspan="11" class="py-6 text-center text-slate-400 italic">No hay salidas registradas. Pulse el botón inferior para añadir una carga.</td>
               </tr>
@@ -274,7 +345,6 @@
               </tr>
             </thead>
             <tbody>
-              <!-- ESTADO VACÍO DESCARGA -->
               <tr *ngIf="descargas.controls.length === 0">
                 <td colspan="8" class="py-6 text-center text-slate-400 italic">No hay retornos registrados en este turno. (Opcional)</td>
               </tr>
@@ -334,7 +404,6 @@
             </label>
           </div>
 
-          <!-- ESTADO VACÍO PERSONAL -->
           <div *ngIf="colaboradores.controls.length === 0" class="text-center py-6 text-slate-400 italic bg-white border border-slate-200 border-dashed rounded-xl mb-4">
              Nadie registrado. Pulse el botón inferior para añadir personal. (Opcional)
           </div>
@@ -395,22 +464,20 @@
     <div class="bg-white px-4 sm:px-8 py-4 sm:py-5 border-t border-slate-200 flex justify-end gap-3 sm:gap-4 flex-shrink-0">
       <button (click)="closeForm()"
         class="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-bold text-slate-500 hover:text-slate-800 bg-slate-100 rounded-xl transition-colors">Cancelar</button>
+      
       <button (click)="onSubmit()"
-        class="px-6 sm:px-8 py-2.5 sm:py-3 text-sm font-bold text-white bg-[#4F46E5] rounded-xl hover:bg-[#4338CA] shadow-md flex items-center gap-2 transition-transform hover:scale-[1.02]">
+        class="px-6 sm:px-8 py-2.5 sm:py-3 text-sm font-bold text-white rounded-xl shadow-md flex items-center gap-2 transition-transform hover:scale-[1.02]"
+        [ngClass]="isEditing ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[#6366f1] hover:bg-[#4f46e5]'">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
-        Guardar Operación
+        {{ isEditing ? 'Actualizar Operación' : 'Guardar Operación' }}
       </button>
     </div>
   </div>
 </div>
 
-<app-confirm-modal [isOpen]="showDeleteConfirm" title="¿Eliminar reporte nocturno?"
-  message="Este reporte se borrará permanentemente del historial." confirmText="Eliminar" (confirm)="executeDelete()"
-  (cancel)="cancelDelete()"></app-confirm-modal>
-
-  <!-- ============================================== -->
+<!-- ============================================== -->
 <!-- MODAL DE DETALLE DE OPERACIÓN (EL OJITO)       -->
 <!-- ============================================== -->
 <div *ngIf="showDetalleModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/70 backdrop-blur-sm">
@@ -429,7 +496,6 @@
 
     <div class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar" *ngIf="registroDetalleActual">
       
-      <!-- INFO GENERAL -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div><p class="text-[10px] uppercase font-bold text-slate-500">Fecha del Turno</p><p class="font-bold text-slate-800">{{ registroDetalleActual.fecha }}</p></div>
         <div><p class="text-[10px] uppercase font-bold text-slate-500">Responsable</p><p class="font-bold text-slate-800">{{ registroDetalleActual.responsable }}</p></div>
@@ -528,6 +594,10 @@
     </div>
   </div>
 </div>
+
+<app-confirm-modal [isOpen]="showDeleteConfirm" title="¿Eliminar reporte nocturno?"
+  message="Este reporte se borrará permanentemente del historial." confirmText="Eliminar" (confirm)="executeDelete()"
+  (cancel)="cancelDelete()"></app-confirm-modal>
 
 <!-- CSS extra para el scroll -->
 <style>

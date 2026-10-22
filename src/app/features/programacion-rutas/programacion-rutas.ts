@@ -233,7 +233,7 @@ export class ProgramacionRutasComponent implements OnInit {
     if (!file) return;
 
     this.isLoading = true;
-    this.toast.showInfo('Analizando Excel Logístico (Recuperando 89 Rutas)...');
+    this.toast.showInfo('Analizando Excel Logístico...');
 
     try {
       const workbook = new ExcelJS.Workbook();
@@ -261,7 +261,6 @@ export class ProgramacionRutasComponent implements OnInit {
       });
 
       const mapPedidoADistribuidor = new Map<string, string>();
-      const mapCodigoANombreReal = new Map<string, string>();
 
       if (sheetInicial) {
         sheetInicial.eachRow((row: any) => {
@@ -272,19 +271,14 @@ export class ProgramacionRutasComponent implements OnInit {
           for (let i = 1; i <= 15; i++) { 
             const val = this.getCellValueText(row.getCell(i));
             if (!val || val === '0') continue;
-
             const valClean = val.replace(/\s/g, '');
 
-            if (/^4[45]\d{5}/.test(valClean)) {
-              pedido = valClean;
-            } else if (/^(10|20|30)\d{5}$/.test(valClean)) {
-              codSap = valClean;
-            } else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION'].includes(val)) {
+            if (/^4[45]\d{5}/.test(valClean)) pedido = valClean;
+            else if (/^(10|20|30)\d{5}$/.test(valClean)) codSap = valClean;
+            else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION'].includes(val)) {
               if (!nombre) nombre = val; 
             }
           }
-
-          if (codSap && nombre) mapCodigoANombreReal.set(codSap, nombre);
           if (pedido && nombre) mapPedidoADistribuidor.set(pedido, nombre);
           if (pedido && codSap && !nombre) mapPedidoADistribuidor.set(pedido, codSap); 
         });
@@ -339,14 +333,10 @@ export class ProgramacionRutasComponent implements OnInit {
             if ((val === 'DISTRIBUIDOR' || val === 'CLIENTE' || val === 'DESTINATARIO' || val === 'NOMBRE' || val === 'RAZON SOCIAL') && colDistribuidor === 0) colDistribuidor = colNum;
 
             if (colNum < colLimite) {
-                // AQUÍ ESTABA EL ERROR: HEMOS DEVUELTO LA COMPATIBILIDAD CON LOS GUIONES (M-15)
                 const valLimpio = val.replace(/\s+/g, '');
                 if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.push(colNum);
                 if (valLimpio.includes('10KG')) cols10.push(colNum);
-                
-                // Reconoce "M-15", "M 15", "M15" o "15 KG"
                 if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.push(colNum);
-                
                 if (valLimpio.includes('45KG')) cols45.push(colNum);
             }
           });
@@ -373,7 +363,6 @@ export class ProgramacionRutasComponent implements OnInit {
       worksheet.eachRow((row: any, rowNumber: number) => {
         if (rowNumber < 5) return; 
 
-        // 1. ESCUDO ANTIBALAS CONTRA SUBTOTALES
         let esSubTotal = false;
         for (let i = 1; i <= 10; i++) {
           const valC = this.getCellValueText(row.getCell(i));
@@ -384,7 +373,6 @@ export class ProgramacionRutasComponent implements OnInit {
         }
         if (esSubTotal) return; 
 
-        // 2. EXTRAER CILINDROS EXACTOS
         let p05 = 0, p10 = 0, p15 = 0, p45 = 0;
         cols05.forEach((c: number) => p05 += this.getCellValueNum(row.getCell(c)));
         cols10.forEach((c: number) => p10 += this.getCellValueNum(row.getCell(c)));
@@ -409,7 +397,6 @@ export class ProgramacionRutasComponent implements OnInit {
           cartelLogistico = '🚫 ' + (txtEntrega.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
         }
 
-        // 3. FILTRO ANTI-FANTASMAS (Destruye la fila 230+)
         if (sumaCilindros === 0 && !esRecojo) {
           return;
         }
@@ -440,8 +427,8 @@ export class ProgramacionRutasComponent implements OnInit {
         }
 
         let textoBusqueda = this.getCellValueText(row.getCell(colDistribuidor));
-        
         const textoLimpio = textoBusqueda.toUpperCase().trim();
+        
         if (palabrasIgnoradas.some(palabra => textoLimpio === palabra || textoLimpio.includes(palabra))) {
           return; 
         }
@@ -461,21 +448,20 @@ export class ProgramacionRutasComponent implements OnInit {
 
         const clienteId = findClienteId(busquedaAvanzada);
         
+        // ========= EXTRACCIÓN EXACTA DE LA COLUMNA DISTRIBUIDOR =========
         if (!clienteId) {
-          let nombreReferencia = mapCodigoANombreReal.get(busquedaAvanzada);
+          // Extrae el texto literal de la celda en la columna DISTRIBUIDOR (Columna E)
+          const valorExactoDistribuidor = this.getCellValueText(row.getCell(colDistribuidor));
           
-          if (!nombreReferencia) {
-             nombreReferencia = this.getNombreRealEnFila(row, colDistribuidor + 1);
-          }
-
-          let etiquetaVisual = busquedaAvanzada;
-          if (nombreReferencia && !busquedaAvanzada.includes(nombreReferencia)) {
-             etiquetaVisual = `${busquedaAvanzada} - ${nombreReferencia}`;
+          let etiquetaError = valorExactoDistribuidor;
+          if (!etiquetaError || etiquetaError === '0') {
+            etiquetaError = textoBusqueda || 'CELDA VACÍA';
           }
           
-          noEncontrados.add(etiquetaVisual);
+          noEncontrados.add(`Fila ${rowNumber}: ${etiquetaError}`);
           return;
         }
+        // ================================================================
 
         if (placaFinal && clienteId && (sumaCilindros > 0 || esRecojo)) {
           nuevasRutas.push({
