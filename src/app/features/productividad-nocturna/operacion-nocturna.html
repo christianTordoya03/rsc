@@ -1,6 +1,5 @@
 <div class="space-y-6 relative h-full w-full overflow-x-hidden p-2 sm:p-4">
   
-  <!-- CABECERA (IGUAL AL DISEÑO VENTAS Y RETORNOS) -->
   <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
     <div>
       <h1 class="text-2xl font-bold text-[#1e293b]">Operación Nocturna</h1>
@@ -25,17 +24,26 @@
     </div>
   </div>
 
+  <!-- BARRA DE FILTRO POR RANGO DE FECHAS (NUEVO) -->
+  <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+    <div class="flex items-center gap-2">
+       <label class="text-[10px] font-bold text-slate-500 uppercase">Desde:</label>
+       <input type="date" [(ngModel)]="filtroMainInicio" (change)="aplicarFiltroMain()" class="text-xs rounded-lg border-slate-300 focus:ring-[#6366f1] text-slate-700">
+    </div>
+    <div class="flex items-center gap-2">
+       <label class="text-[10px] font-bold text-slate-500 uppercase">Hasta:</label>
+       <input type="date" [(ngModel)]="filtroMainFin" (change)="aplicarFiltroMain()" class="text-xs rounded-lg border-slate-300 focus:ring-[#6366f1] text-slate-700">
+    </div>
+    <div class="flex-1"></div>
+    <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider hidden sm:block">Datos filtrados por rango</span>
+  </div>
+
   <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
     <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- ESTRUCTURA PRINCIPAL (GRID COMO LA IMAGEN) -->
   <div class="flex flex-col xl:flex-row gap-6">
-    
-    <!-- COLUMNA IZQUIERDA (1/3) -->
     <div class="w-full xl:w-[35%] space-y-6">
-      
-      <!-- TARJETA TOTAL SALIDAS -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex justify-between items-center">
         <div>
           <h3 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">TOTAL SALIDAS (Cargas)</h3>
@@ -46,30 +54,26 @@
         </div>
       </div>
 
-      <!-- TARJETA GRÁFICO (Estructura blindada para html2canvas) -->
-      <div id="grafica-nocturna" class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col" style="min-height: 420px;">
-        <h3 class="text-xs font-bold text-slate-800 uppercase mb-4">KG DESPACHADOS (ÚLTIMOS DÍAS)</h3>
+      <div id="grafica-nocturna" class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 flex flex-col" style="min-height: 450px;">
+        <h3 class="text-xs font-bold text-slate-800 uppercase mb-4">KG DESPACHADOS (POR PLACA)</h3>
         
         <div class="flex justify-end gap-4 mb-6 text-[10px] font-bold">
            <div class="flex items-center gap-1.5 text-slate-500"><div class="w-6 h-3 bg-[#6366f1] rounded-sm"></div> Volumen Kg</div>
         </div>
 
-        <!-- 1. CONTENEDOR DE BARRAS (Altura exacta) -->
         <div class="relative h-[240px] flex items-end gap-2 w-full">
-          <!-- Líneas de fondo -->
           <div class="absolute inset-0 flex flex-col justify-between z-0 pointer-events-none">
              <div class="border-t border-slate-100 w-full"></div>
              <div class="border-t border-slate-100 w-full"></div>
              <div class="border-t border-slate-100 w-full"></div>
              <div class="border-t border-slate-100 w-full"></div>
              <div class="border-t border-slate-100 w-full"></div>
-             <div class="border-t border-slate-300 w-full"></div> <!-- Línea base gruesa -->
+             <div class="border-t border-slate-300 w-full"></div> 
           </div>
           
-          <div *ngIf="dashDataDias.length === 0" class="absolute inset-0 flex justify-center items-center text-slate-400 italic text-sm z-10">Sin datos</div>
+          <div *ngIf="dashDataPlacas.length === 0" class="absolute inset-0 flex justify-center items-center text-slate-400 italic text-sm z-10">Sin datos en este rango de fechas.</div>
 
-          <!-- Solo las Barras -->
-          <div *ngFor="let dia of dashDataDias" class="flex-1 flex justify-center items-end h-full z-10 group relative">
+          <div *ngFor="let dia of dashDataPlacas" class="flex-1 flex justify-center items-end h-full z-10 group relative">
              <div class="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-lg">
                {{ dia.kg | number }} Kg
              </div>
@@ -77,23 +81,23 @@
           </div>
         </div>
 
-        <!-- 2. CONTENEDOR DE FECHAS (Independiente y a salvo de recortes) -->
         <div class="flex gap-2 w-full mt-3">
-          <div *ngFor="let dia of dashDataDias" class="flex-1 text-center">
-             <span class="text-[11px] text-slate-500 font-bold block">{{ dia.fechaCorto }}</span>
+          <div *ngFor="let dia of dashDataPlacas" class="flex-1 flex flex-col items-center">
+             <span class="text-[9px] text-slate-600 font-bold block truncate w-full text-center" [title]="dia.nombreCorto">{{ dia.nombreCorto }}</span>
+             <div class="w-full max-w-[30px] h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden border border-slate-200">
+                <div class="h-full bg-emerald-400" [style.width]="dia.factor"></div>
+             </div>
+             <span class="text-[8px] text-slate-400 font-bold mt-0.5">{{ dia.factor }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- COLUMNA DERECHA (2/3) -->
     <div class="w-full xl:w-[65%] space-y-6">
-      
-      <!-- TARJETAS SUPERIORES -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
           <div>
-            <h3 class="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider mb-1">TOTAL KG MOVIDOS</h3>
+            <h3 class="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider mb-1">TOTAL KG CARGADOS</h3>
             <p class="text-3xl font-black text-[#6366f1]">{{ dashTotalKg | number }}</p>
           </div>
           <div class="p-3 bg-indigo-50 rounded-lg text-indigo-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div>
@@ -101,14 +105,14 @@
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
           <div>
-            <h3 class="text-[11px] font-bold text-[#ef4444] uppercase tracking-wider mb-1">TOTAL RETORNOS</h3>
+            <h3 class="text-[11px] font-bold text-[#ef4444] uppercase tracking-wider mb-1">TOTAL UNIDADES CON CILINDROS DESCARGADOS</h3>
             <p class="text-3xl font-black text-[#ef4444]">{{ dashTotalRetornos }}</p>
+            <p class="text-[11px] text-slate-500 font-bold mt-1">({{ dashTotalKgDescargados | number }} Kg devueltos)</p>
           </div>
           <div class="p-3 bg-red-50 rounded-lg text-red-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg></div>
         </div>
       </div>
 
-      <!-- TABLA PRINCIPAL AL ESTILO "VENTAS Y RETORNOS" -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -122,7 +126,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm">
-              <tr *ngIf="registros.length === 0"><td colspan="5" class="p-8 text-center text-slate-400">Aún no hay operaciones registradas.</td></tr>
+              <tr *ngIf="registros.length === 0"><td colspan="5" class="p-8 text-center text-slate-400">Aún no hay operaciones registradas en este rango de fechas.</td></tr>
               
               <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
                 <td class="p-4">
@@ -147,14 +151,10 @@
           </table>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- ============================================== -->
-<!-- MODAL DE CONTROL DE ASISTENCIA Y FALTAS        -->
-<!-- ============================================== -->
 <div *ngIf="showAsistenciaModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/70 backdrop-blur-sm">
   <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
     <div class="bg-emerald-600 px-4 sm:px-6 py-4 flex items-center justify-between shrink-0">
@@ -165,26 +165,33 @@
       <button (click)="cerrarAsistencia()" class="text-emerald-100 hover:text-white bg-emerald-700/50 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
+    <!-- BARRA DE FILTROS ASISTENCIA MODIFICADA A RANGO DE FECHAS -->
     <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 shrink-0">
-      <div class="flex-1">
-        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mes de Evaluación</label>
-        <input type="month" [(ngModel)]="filtroMes" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-emerald-500">
+      <div class="flex-[1.5] flex gap-2">
+        <div class="flex-1">
+          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde</label>
+          <input type="date" [(ngModel)]="filtroAsistenciaInicio" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-emerald-500">
+        </div>
+        <div class="flex-1">
+          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta</label>
+          <input type="date" [(ngModel)]="filtroAsistenciaFin" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm focus:ring-emerald-500">
+        </div>
       </div>
-      <div class="flex-[2] relative">
+      <div class="flex-[1.5] relative">
         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Buscar Empleado</label>
         <div class="relative">
           <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input type="text" [(ngModel)]="filtroEmpleado" (ngModelChange)="generarReporteAsistencia()" placeholder="Escribe el nombre o DNI..." class="w-full pl-10 pr-4 py-2 rounded-lg border-slate-300 text-sm focus:ring-emerald-500 transition-all">
+          <input type="text" [(ngModel)]="filtroEmpleado" (ngModelChange)="generarReporteAsistencia()" placeholder="Nombre o DNI..." class="w-full pl-10 pr-4 py-2 rounded-lg border-slate-300 text-sm focus:ring-emerald-500 transition-all">
         </div>
       </div>
       <div class="flex-1">
         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Filtrar Estado</label>
         <select [(ngModel)]="filtroEstado" (ngModelChange)="generarReporteAsistencia()" class="w-full rounded-lg border-slate-300 text-sm font-medium focus:ring-emerald-500">
-          <option value="Todos">Todos (Historial)</option>
+          <option value="Todos">Todos</option>
           <option value="Asistió">Solo Asistencias</option>
           <option value="Falta">🚨 Solo Faltas</option>
           <option value="Tardanza">⚠️ Solo Tardanzas</option>
-          <option value="Permiso">ℹ️ Permisos / Descansos</option>
+          <option value="Permiso">ℹ️ Permisos</option>
         </select>
       </div>
       <div class="flex items-end">
@@ -206,7 +213,7 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr *ngIf="asistenciaConsolidada.length === 0">
-            <td colspan="4" class="py-10 text-center text-slate-400 font-medium">No se encontraron registros con estos filtros.</td>
+            <td colspan="4" class="py-10 text-center text-slate-400 font-medium">No se encontraron registros de personal en el rango seleccionado.</td>
           </tr>
           <tr *ngFor="let a of asistenciaConsolidada" class="hover:bg-slate-50 transition-colors">
             <td class="py-3 px-2 font-bold text-slate-600">{{ a.fecha }}</td>
@@ -242,12 +249,14 @@
         <svg *ngIf="isEditing" class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
         {{ isEditing ? 'Editar Operación Nocturna' : 'Nuevo Registro de Operación' }}
       </h2>
-      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+      <button (click)="closeForm()" class="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"><svg
+          class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg></button>
     </div>
 
     <form [formGroup]="reporteForm" class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6 sm:space-y-8 custom-scrollbar">
       
-      <!-- CABECERA -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <label class="block text-[10px] sm:text-xs font-bold text-slate-500 mb-2 uppercase">Fecha del Turno <span class="text-red-500">*</span></label>
@@ -262,7 +271,6 @@
         </div>
       </div>
 
-      <!-- SECCIÓN 1: CARGA -->
       <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
         <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">1. Salida de Unidades (Carga Diaria)</h3>
 
@@ -305,8 +313,11 @@
                 <td class="py-2 px-1"><input formControlName="total_kg" type="text"
                     class="w-20 text-xs rounded-lg border-transparent bg-indigo-50 text-center font-bold text-[#4F46E5]">
                 </td>
-                <td class="py-2 px-1"><input formControlName="factor_carga" type="text"
-                    class="w-20 text-xs rounded-lg border-transparent bg-indigo-50 text-center font-black text-[#4F46E5]">
+                <td class="py-2 px-1 text-center">
+                   <input formControlName="factor_carga" type="text" class="w-20 text-xs rounded-lg border-transparent bg-indigo-50 text-center font-black text-[#4F46E5] mb-1 pb-1">
+                   <div class="w-full max-w-[50px] mx-auto h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                       <div class="h-full bg-indigo-500 transition-all duration-500" [style.width]="c.get('factor_carga')?.value"></div>
+                   </div>
                 </td>
                 <td class="py-2 px-1"><input formControlName="constancia" type="text"
                     class="w-24 text-xs rounded-lg border-slate-300 focus:ring-[#4F46E5]" placeholder="N° Doc"></td>
@@ -326,9 +337,8 @@
         </div>
       </div>
 
-      <!-- SECCIÓN 2: DESCARGA -->
       <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-        <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">2. Retorno de Unidades (Descarga)</h3>
+        <h3 class="text-base sm:text-lg font-bold text-slate-800 mb-4 border-b border-slate-100 pb-3">2. Control de cilindros descargados</h3>
 
         <div class="overflow-x-auto" formArrayName="descargas">
           <table class="w-full text-left border-collapse whitespace-nowrap text-sm mb-4">
@@ -381,7 +391,6 @@
         </div>
       </div>
 
-      <!-- SECCIÓN 3: TIEMPOS Y PERSONAL -->
       <div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm space-y-6">
         <h3 class="text-base sm:text-lg font-bold text-slate-800 border-b border-slate-100 pb-3">3. Tiempos, Incidencias y Asistencia</h3>
 
@@ -477,9 +486,6 @@
   </div>
 </div>
 
-<!-- ============================================== -->
-<!-- MODAL DE DETALLE DE OPERACIÓN (EL OJITO)       -->
-<!-- ============================================== -->
 <div *ngIf="showDetalleModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/70 backdrop-blur-sm">
   <div class="bg-[#F8FAFC] w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
     
@@ -508,7 +514,6 @@
         <p class="text-amber-900">{{ registroDetalleActual.datos_formulario.dificultad_carga }}</p>
       </div>
 
-      <!-- CARGAS -->
       <div>
         <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">1</span> Salidas de Unidades (Cargas)</h3>
         <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
@@ -525,7 +530,12 @@
                 <td class="p-3 text-center">{{ c.p15 }}</td>
                 <td class="p-3 text-center">{{ c.p45 }}</td>
                 <td class="p-3 text-center font-bold text-indigo-600">{{ c.total_kg }}</td>
-                <td class="p-3 text-center font-bold text-slate-600">{{ c.factor_carga }}</td>
+                <td class="p-3 text-center">
+                   <span class="font-bold text-slate-600 block mb-1 text-[10px]">{{ c.factor_carga }}</span>
+                   <div class="w-full max-w-[60px] mx-auto h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                       <div class="h-full bg-indigo-500" [style.width]="c.factor_carga"></div>
+                   </div>
+                </td>
                 <td class="p-3 text-slate-500 text-xs">{{ c.obs || '-' }}</td>
               </tr>
             </tbody>
@@ -533,9 +543,8 @@
         </div>
       </div>
 
-      <!-- DESCARGAS -->
       <div>
-        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">2</span> Retornos de Unidades (Descargas)</h3>
+        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">2</span> Control de cilindros descargados</h3>
         <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
           <table class="w-full text-left text-sm whitespace-nowrap">
             <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase">
@@ -557,7 +566,6 @@
         </div>
       </div>
 
-      <!-- PERSONAL -->
       <div>
         <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2"><span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">3</span> Personal en Turno</h3>
         <div class="bg-white rounded-xl border border-slate-200 overflow-x-auto shadow-sm">
@@ -599,7 +607,6 @@
   message="Este reporte se borrará permanentemente del historial." confirmText="Eliminar" (confirm)="executeDelete()"
   (cancel)="cancelDelete()"></app-confirm-modal>
 
-<!-- CSS extra para el scroll -->
 <style>
   .custom-scrollbar::-webkit-scrollbar { width: 8px; }
   .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

@@ -23,6 +23,7 @@ export class OperacionNocturnaComponent implements OnInit {
   showDetalleModal = false;
   isLoading = false;
   registros: any[] = [];
+  registrosCompletos: any[] = []; // Guarda toda la DB para no perderla al filtrar
   nombreResponsable = 'Cargando...'; 
   
   isEditing = false;
@@ -31,15 +32,23 @@ export class OperacionNocturnaComponent implements OnInit {
   recordToDelete: string | null = null;
   registroDetalleActual: any = null;
   
+  // Filtros Main View
+  filtroMainInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  filtroMainFin = new Date().toISOString().split('T')[0];
+
   // Variables del Dashboard Principal
   dashTotalTurnos = 0;
   dashTotalSalidas = 0;
   dashTotalRetornos = 0;
   dashTotalKg = 0;
-  dashDataDias: any[] = [];
+  dashTotalKgDescargados = 0;
+  dashDataPlacas: any[] = []; 
 
   reporteForm!: FormGroup;
-  filtroMes = new Date().toISOString().slice(0, 7); 
+  
+  // Filtros de Asistencia
+  filtroAsistenciaInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  filtroAsistenciaFin = new Date().toISOString().split('T')[0];
   filtroEmpleado = '';
   filtroEstado = 'Todos';
   asistenciaConsolidada: any[] = [];
@@ -102,7 +111,7 @@ export class OperacionNocturnaComponent implements OnInit {
     fila.valueChanges.subscribe(() => {
       const f = fila.getRawValue();
       const unidad = this.unidades.find(u => u.placa === f.placa);
-      const cap = unidad?.capacidad || 0; // <-- Blindado: Si no encuentra, fuerza el 0
+      const cap = unidad?.capacidad || 0;
       const tot = (Number(f.p05) * 5) + (Number(f.p10) * 10) + (Number(f.p15) * 15) + (Number(f.p45) * 45);
       const factor = cap > 0 ? (tot / cap) * 100 : 0;
       fila.patchValue({ capacidad: cap, total_kg: tot, factor_carga: factor.toFixed(2) + '%' }, { emitEvent: false });
@@ -198,9 +207,22 @@ export class OperacionNocturnaComponent implements OnInit {
     try {
       const { data, error } = await this.supabase.from('productividad_nocturna').select('*').order('fecha', { ascending: false });
       if (error && error.code !== '42P01') throw error;
-      this.registros = data || [];
-      this.actualizarDashboard();
-    } catch (e) { this.toast.showError('Error al cargar historial.'); } finally { this.isLoading = false; }
+      
+      this.registrosCompletos = data || [];
+      this.aplicarFiltroMain(); // Aplica el rango de fechas al cargar
+    } catch (e) { 
+      this.toast.showError('Error al cargar historial.'); 
+    } finally { 
+      this.isLoading = false; 
+    }
+  }
+
+  // ==== FILTRO PRINCIPAL (RANGO FECHAS) ====
+  aplicarFiltroMain() {
+    this.registros = this.registrosCompletos.filter(reg => {
+      return reg.fecha >= this.filtroMainInicio && reg.fecha <= this.filtroMainFin;
+    });
+    this.actualizarDashboard();
   }
 
   actualizarDashboard() {
@@ -208,42 +230,50 @@ export class OperacionNocturnaComponent implements OnInit {
     this.dashTotalSalidas = 0;
     this.dashTotalRetornos = 0;
     this.dashTotalKg = 0;
+    this.dashTotalKgDescargados = 0;
 
-    const diasMap = new Map<string, number>();
+    const placasMap = new Map<string, { kg: number, cap: number }>();
 
     this.registros.forEach(r => {
-      let kgDia = 0;
       if (r.datos_formulario?.cargas) {
         this.dashTotalSalidas += r.datos_formulario.cargas.length;
         r.datos_formulario.cargas.forEach((c: any) => {
           const k = Number(c.total_kg || 0);
+          const cp = Number(c.capacidad || 0);
           this.dashTotalKg += k;
-          kgDia += k;
+          
+          if (c.placa) {
+            const current = placasMap.get(c.placa) || { kg: 0, cap: 0 };
+            placasMap.set(c.placa, { kg: current.kg + k, cap: current.cap + cp });
+          }
         });
       }
+      
       if (r.datos_formulario?.descargas) {
         this.dashTotalRetornos += r.datos_formulario.descargas.length;
+        r.datos_formulario.descargas.forEach((d: any) => {
+          const kDesc = (Number(d.p05 || 0)*5) + (Number(d.p10 || 0)*10) + (Number(d.p15 || 0)*15) + (Number(d.p45 || 0)*45);
+          this.dashTotalKgDescargados += kDesc;
+        });
       }
-
-      if (diasMap.has(r.fecha)) diasMap.set(r.fecha, diasMap.get(r.fecha)! + kgDia);
-      else diasMap.set(r.fecha, kgDia);
     });
 
-    const sortedDias = Array.from(diasMap.entries())
-      .map(([fecha, kg]) => ({ fecha, kg }))
-      .sort((a, b) => a.fecha.localeCompare(b.fecha))
-      .slice(-7); 
+    const sortedPlacas = Array.from(placasMap.entries())
+      .map(([placa, data]) => {
+        const factorPorcentaje = data.cap > 0 ? ((data.kg / data.cap) * 100).toFixed(1) : '0.0';
+        return { placa, kg: data.kg, factor: factorPorcentaje + '%' };
+      })
+      .sort((a, b) => b.kg - a.kg)
+      .slice(0, 10); 
 
-    const maxKg = Math.max(...sortedDias.map(d => d.kg), 1);
+    const maxKg = Math.max(...sortedPlacas.map(d => d.kg), 1);
 
-    this.dashDataDias = sortedDias.map(d => {
-      const parts = d.fecha.split('-');
-      return {
-        fechaCorto: `${parts[2]}/${parts[1]}`,
-        kg: d.kg,
-        porcentaje: (d.kg / maxKg) * 100 
-      };
-    });
+    this.dashDataPlacas = sortedPlacas.map(d => ({
+      nombreCorto: d.placa,
+      kg: d.kg,
+      factor: d.factor,
+      porcentaje: (d.kg / maxKg) * 100 
+    }));
   }
 
   async onSubmit() {
@@ -300,8 +330,10 @@ export class OperacionNocturnaComponent implements OnInit {
   
   generarReporteAsistencia() {
     this.asistenciaConsolidada = [];
-    this.registros.forEach((reg: any) => {
-      if (this.filtroMes && !reg.fecha.startsWith(this.filtroMes)) return;
+    this.registrosCompletos.forEach((reg: any) => {
+      // Filtramos por el RANGO DE FECHAS del modal
+      if (reg.fecha < this.filtroAsistenciaInicio || reg.fecha > this.filtroAsistenciaFin) return;
+      
       const personal = reg.datos_formulario?.colaboradores || [];
       personal.forEach((p: any) => {
         const term = this.filtroEmpleado.toLowerCase().trim();
@@ -318,7 +350,7 @@ export class OperacionNocturnaComponent implements OnInit {
   }
 
   async exportarAsistencia() {
-    if (this.asistenciaConsolidada.length === 0) return this.toast.showWarning('No hay datos.');
+    if (this.asistenciaConsolidada.length === 0) return this.toast.showWarning('No hay datos en el rango seleccionado.');
     this.toast.showInfo('Generando Excel de Asistencia...');
     try {
       const workbook = new ExcelJS.Workbook();
@@ -343,18 +375,16 @@ export class OperacionNocturnaComponent implements OnInit {
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Asistencia_${this.filtroMes}.xlsx`; a.click();
+      const a = document.createElement('a'); a.href = url; 
+      a.download = `Asistencia_${this.filtroAsistenciaInicio}_al_${this.filtroAsistenciaFin}.xlsx`; 
+      a.click();
     } catch (e) { this.toast.showError('Error al exportar'); }
   }
 
-  // ==== EXPORTACIÓN DE EXCEL MEJORADA (DISEÑO GERENCIAL PROFESIONAL) ====
   async exportarExcel() {
-    if (!this.registros || this.registros.length === 0) return this.toast.showWarning('No hay datos operativos.');
-    this.toast.showInfo('Capturando gráfica visual y generando Excel...');
+    if (!this.registros || this.registros.length === 0) return this.toast.showWarning('No hay datos en el rango seleccionado.');
+    this.toast.showInfo('Capturando gráfica y generando Excel Gerencial...');
     
-    if (this.dashDataDias.length === 0) this.actualizarDashboard();
-    
-    // 1. Capturar la gráfica del HTML como Imagen Base64
     let graficaBase64 = '';
     const chartElement = document.getElementById('grafica-nocturna');
     if (chartElement) {
@@ -369,24 +399,26 @@ export class OperacionNocturnaComponent implements OnInit {
     try {
       const workbook = new ExcelJS.Workbook();
       
-      // PESTAÑA 1: DASHBOARD
       const wsDash = workbook.addWorksheet('Dashboard Resumen', { views: [{ showGridLines: false }] });
       
       wsDash.getColumn('A').width = 3;  
-      wsDash.getColumn('B').width = 32; 
+      wsDash.getColumn('B').width = 35; 
       wsDash.getColumn('C').width = 15; 
+      wsDash.getColumn('D').width = 4;  
+      wsDash.getColumn('E').width = 15; 
+      wsDash.getColumn('F').width = 18; 
+      wsDash.getColumn('G').width = 50; 
 
-      wsDash.mergeCells('B2:J4');
+      wsDash.mergeCells('B2:G4');
       const titleCell = wsDash.getCell('B2');
-      titleCell.value = '📊 REPORTE GERENCIAL - OPERACIÓN NOCTURNA RSC';
-      titleCell.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+      titleCell.value = `📊 REPORTE GERENCIAL - OPERACIÓN NOCTURNA (${this.filtroMainInicio} al ${this.filtroMainFin})`;
+      titleCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
       titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; 
       titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
 
-      // KPIs
       wsDash.mergeCells('B6:C6');
       const kpiTitle = wsDash.getCell('B6');
-      kpiTitle.value = 'MÉTRICAS CLAVE';
+      kpiTitle.value = 'MÉTRICAS CLAVE DEL RANGO';
       kpiTitle.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
       kpiTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } }; 
       kpiTitle.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -395,7 +427,8 @@ export class OperacionNocturnaComponent implements OnInit {
         { label: 'Total Turnos Registrados', val: this.dashTotalTurnos },
         { label: 'Total Camiones Cargados (Salidas)', val: this.dashTotalSalidas },
         { label: 'Total Camiones Descargados (Retornos)', val: this.dashTotalRetornos },
-        { label: 'Volumen Total Movido (Kg)', val: this.dashTotalKg }
+        { label: 'Volumen Total Cargado (Kg Venta)', val: this.dashTotalKg },
+        { label: 'Volumen Total Descargado (Kg Informativo)', val: this.dashTotalKgDescargados }
       ];
 
       let rowLine = 8;
@@ -406,33 +439,22 @@ export class OperacionNocturnaComponent implements OnInit {
         lblCell.value = kpi.label;
         lblCell.font = { bold: true, color: { argb: 'FF475569' } };
         lblCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
-        lblCell.border = { left: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
+        lblCell.border = { left: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}}, top: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
 
         valCell.value = kpi.val;
         valCell.font = { bold: true, size: 12, color: { argb: 'FF0F766E' } };
         valCell.alignment = { horizontal: 'right', vertical: 'middle' };
-        valCell.border = { right: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
+        valCell.border = { right: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}}, top: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
         
-        if (idx === 3) valCell.numFmt = '#,##0 "Kg"';
+        if (idx >= 3) valCell.numFmt = '#,##0 "Kg"';
         rowLine++;
       });
-      wsDash.getCell('B8').border = { top: {style: 'thin', color: {argb: 'FFCBD5E1'}}, left: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
-      wsDash.getCell('C8').border = { top: {style: 'thin', color: {argb: 'FFCBD5E1'}}, right: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
 
-      // 2. Insertar la Gráfica Visual exactamente como se ve en pantalla
       if (graficaBase64) {
-        const imageId = workbook.addImage({
-          base64: graficaBase64,
-          extension: 'png',
-        });
-        // La insertamos a partir de la columna E (índice 4), fila 6 (índice 5)
-        wsDash.addImage(imageId, {
-          tl: { col: 4, row: 5 },
-          ext: { width: 550, height: 350 }
-        });
+        const imageId = workbook.addImage({ base64: graficaBase64, extension: 'png' });
+        wsDash.addImage(imageId, { tl: { col: 4, row: 5 }, ext: { width: 550, height: 350 } });
       }
 
-      // PESTAÑA 2: CARGAS
       const wsCargas = workbook.addWorksheet('Detalle Cargas');
       wsCargas.columns = [
         { header: 'FECHA TURNO', key: 'fecha', width: 15 }, { header: 'RESPONSABLE', key: 'responsable', width: 25 },
@@ -456,8 +478,7 @@ export class OperacionNocturnaComponent implements OnInit {
         }
       });
 
-      // PESTAÑA 3: DESCARGAS
-      const wsDescargas = workbook.addWorksheet('Detalle Descargas');
+      const wsDescargas = workbook.addWorksheet('Control Cilindros Descargados');
       wsDescargas.columns = [
         { header: 'FECHA TURNO', key: 'fecha', width: 15 }, { header: 'PLACA', key: 'placa', width: 15 },
         { header: 'ESTADO CILINDROS', key: 'estado', width: 20 },
@@ -483,7 +504,7 @@ export class OperacionNocturnaComponent implements OnInit {
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url;
-      a.download = `Reporte_Gerencial_Nocturno_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Reporte_Nocturno_${this.filtroMainInicio}_al_${this.filtroMainFin}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
       
