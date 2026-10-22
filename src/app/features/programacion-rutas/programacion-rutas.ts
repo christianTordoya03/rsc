@@ -438,7 +438,7 @@ export class ProgramacionRutasComponent implements OnInit {
         }
 
         if (!textoBusqueda || textoBusqueda === '0') {
-           noEncontrados.add(`Fila ${rowNumber}: Falta el nombre del distribuidor (Placa: ${placaFinal} | Pedido: ${txtPedido})`);
+           noEncontrados.add(`Fila ${rowNumber}`);
            return; 
         }
 
@@ -448,20 +448,19 @@ export class ProgramacionRutasComponent implements OnInit {
 
         const clienteId = findClienteId(busquedaAvanzada);
         
-        // ========= EXTRACCIÓN EXACTA DE LA COLUMNA DISTRIBUIDOR =========
+        // ====== LÓGICA ULTRA LIMPIA: SOLO LA FILA O FILA + NOMBRE REAL ======
         if (!clienteId) {
-          // Extrae el texto literal de la celda en la columna DISTRIBUIDOR (Columna E)
           const valorExactoDistribuidor = this.getCellValueText(row.getCell(colDistribuidor));
           
-          let etiquetaError = valorExactoDistribuidor;
-          if (!etiquetaError || etiquetaError === '0') {
-            etiquetaError = textoBusqueda || 'CELDA VACÍA';
+          // Verificamos si el valor capturado tiene al menos una letra (no es un código SAP puro)
+          if (valorExactoDistribuidor && /[A-Za-z]/.test(valorExactoDistribuidor) && valorExactoDistribuidor !== '0') {
+             noEncontrados.add(`Fila ${rowNumber}: ${valorExactoDistribuidor}`);
+          } else {
+             // Si está vacío, es '0', o es puro número (3031507), mostramos SOLO la fila
+             noEncontrados.add(`Fila ${rowNumber}`);
           }
-          
-          noEncontrados.add(`Fila ${rowNumber}: ${etiquetaError}`);
           return;
         }
-        // ================================================================
 
         if (placaFinal && clienteId && (sumaCilindros > 0 || esRecojo)) {
           nuevasRutas.push({
