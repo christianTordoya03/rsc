@@ -24,7 +24,6 @@
     </div>
   </div>
 
-  <!-- BARRA DE FILTRO POR RANGO DE FECHAS (NUEVO) -->
   <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
     <div class="flex items-center gap-2">
        <label class="text-[10px] font-bold text-slate-500 uppercase">Desde:</label>
@@ -95,6 +94,7 @@
 
     <div class="w-full xl:w-[65%] space-y-6">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
           <div>
             <h3 class="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider mb-1">TOTAL KG CARGADOS</h3>
@@ -105,11 +105,10 @@
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex justify-between items-center">
           <div>
-            <h3 class="text-[11px] font-bold text-[#ef4444] uppercase tracking-wider mb-1">TOTAL UNIDADES CON CILINDROS DESCARGADOS</h3>
-            <p class="text-3xl font-black text-[#ef4444]">{{ dashTotalRetornos }}</p>
-            <p class="text-[11px] text-slate-500 font-bold mt-1">({{ dashTotalKgDescargados | number }} Kg devueltos)</p>
+            <h3 class="text-[11px] font-bold text-[#6366f1] uppercase tracking-wider mb-1">TOTAL UNIDADES CON<br>CILINDROS DESCARGADOS</h3>
+            <p class="text-3xl font-black text-[#6366f1]">{{ dashTotalRetornos }}</p>
+            <p class="text-[10px] text-slate-500 font-bold mt-1">({{ dashDescargasVaciosQty | number }} Und vacías | {{ dashDescargasLlenosKg | number }} Kg llenos)</p>
           </div>
-          <div class="p-3 bg-red-50 rounded-lg text-red-500"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg></div>
         </div>
       </div>
 
@@ -121,7 +120,7 @@
                 <th class="p-4 w-1/4">Fecha / Turno</th>
                 <th class="p-4 w-2/4">Responsable</th>
                 <th class="p-4 text-center">Salidas</th>
-                <th class="p-4 text-center text-[#ef4444]">Retornos</th>
+                <th class="p-4 text-center">Descargas</th>
                 <th class="p-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -138,7 +137,7 @@
                   <div class="text-[10px] text-slate-400 mt-1 uppercase">Personal Asistente: {{ reg.datos_formulario?.colaboradores?.length || 0 }}</div>
                 </td>
                 <td class="p-4 text-center font-bold text-slate-700">{{ reg.datos_formulario?.cargas?.length || 0 }}</td>
-                <td class="p-4 text-center font-bold text-[#ef4444]">{{ reg.datos_formulario?.descargas?.length || 0 }}</td>
+                <td class="p-4 text-center font-bold">{{ reg.datos_formulario?.descargas?.length || 0 }}</td>
                 <td class="p-4 text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button (click)="verDetalle(reg)" class="p-1.5 border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></button>
@@ -165,7 +164,6 @@
       <button (click)="cerrarAsistencia()" class="text-emerald-100 hover:text-white bg-emerald-700/50 p-2 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
-    <!-- BARRA DE FILTROS ASISTENCIA MODIFICADA A RANGO DE FECHAS -->
     <div class="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 shrink-0">
       <div class="flex-[1.5] flex gap-2">
         <div class="flex-1">
@@ -237,9 +235,6 @@
   </div>
 </div>
 
-<!-- ============================================== -->
-<!-- MODAL DE FORMULARIO DE REGISTRO / EDICIÓN      -->
-<!-- ============================================== -->
 <div *ngIf="showForm" class="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:pl-[270px] bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-[#F8FAFC] w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[95vh]">
 

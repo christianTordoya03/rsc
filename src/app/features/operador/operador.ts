@@ -28,7 +28,7 @@ export class OperadorComponent implements OnInit {
   rutaActual: any = null;
   archivoEvidencia: File | null = null;
 
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940'];
 
   checkinForm: FormGroup;
   checkoutForm: FormGroup;
@@ -52,7 +52,7 @@ export class OperadorComponent implements OnInit {
       peajes: [0, Validators.min(0)]
     });
 
-    // AQUÍ ESTÁ EL CAMBIO (Limpio sin vm15 ni mm15)
+    // LIMPIO Y ESTANDARIZADO
     this.despachoForm = this.fb.group({
       v05: [0], v10: [0], v15: [0], v45: [0], 
       m05: [0], m10: [0], m15: [0], m45: [0], 
@@ -135,6 +135,7 @@ export class OperadorComponent implements OnInit {
     
     this.isLoading = true;
     try {
+      // INYECTAMOS EL USUARIO PARA LA CONEXIÓN PERFECTA
       const payload = {
         fecha: this.datosJornada.fecha,
         placa: this.datosJornada.placa,
@@ -142,7 +143,8 @@ export class OperadorComponent implements OnInit {
         km_final: this.checkoutForm.value.kmFinal,
         galones: this.checkoutForm.value.galones,
         costo_total: this.checkoutForm.value.montoCombustible,
-        gasto_peaje: this.checkoutForm.value.peajes
+        gasto_peaje: this.checkoutForm.value.peajes,
+        registrado_por: this.userId 
       };
       
       const { error } = await this.supabase.from('control_combustible').insert(payload);
@@ -176,10 +178,10 @@ export class OperadorComponent implements OnInit {
     this.rutasAsignadas = data || [];
   }
 
-  // --- SEMÁFORO LÓGICA ---
+  // --- SEMÁFORO LÓGICA (Corregido a las variables puras p15 y v15) ---
   getEstadoSemaforo(ruta: any) {
-    const totalProg = (ruta.p05||0) + (ruta.p10||0) + (ruta.pm15||0) + (ruta.p15||0) + (ruta.p45||0);
-    const totalVendido = (ruta.v05||0) + (ruta.v10||0) + (ruta.vm15||0) + (ruta.v15||0) + (ruta.v45||0);
+    const totalProg = (ruta.p05||0) + (ruta.p10||0) + (ruta.p15||0) + (ruta.p45||0);
+    const totalVendido = (ruta.v05||0) + (ruta.v10||0) + (ruta.v15||0) + (ruta.v45||0) + (ruta.m05||0) + (ruta.m10||0) + (ruta.m15||0) + (ruta.m45||0);
 
     if (totalVendido === 0) return { color: 'bg-red-500', texto: 'Pendiente', pct: 0 };
     if (totalVendido > 0 && totalVendido < totalProg) return { color: 'bg-yellow-400', texto: 'En Proceso', pct: Math.round((totalVendido/totalProg)*100) };
@@ -190,15 +192,14 @@ export class OperadorComponent implements OnInit {
   abrirDespacho(ruta: any) {
     this.rutaActual = ruta;
     this.despachoForm.reset({
-      v05: 0, v10: 0, vm15: 0, v15: 0, v45: 0,
-      m05: 0, m10: 0, mm15: 0, m15: 0, m45: 0,
+      v05: 0, v10: 0, v15: 0, v45: 0,
+      m05: 0, m10: 0, m15: 0, m45: 0,
       cambio_programacion: 0, tipo_movimiento_cilindro: 'NINGUNO', cantidad_cilindros: 0
     });
     this.archivoEvidencia = null;
     this.showDespachoModal = true;
   }
 
-  // NUEVO: Calcula cuánto falta por entregar de cada tipo (Restando Ventas y Mermas)
   getFaltante(tipo: string): number {
     if (!this.rutaActual) return 0;
     const programado = this.rutaActual[`p${tipo}`] || 0;
@@ -210,7 +211,7 @@ export class OperadorComponent implements OnInit {
 
   get tieneMerma() {
     const v = this.despachoForm.value;
-    return (v.m05 + v.m10 + v.mm15 + v.m15 + v.m45) > 0;
+    return (v.m05 + v.m10 + v.m15 + v.m45) > 0;
   }
 
   onFileSelected(event: any) {
@@ -229,11 +230,9 @@ export class OperadorComponent implements OnInit {
     const v = this.despachoForm.value;
     const r = this.rutaActual;
     
-    // IMPORTANTE: Cada viaje inicia sin foto. Solo toma foto si en ESTE viaje hay merma.
     let urlFoto = null; 
 
     try {
-      // 1. SUBIR LA FOTO DE ESTE VIAJE EN ESPECÍFICO (Si hay merma)
       if (this.tieneMerma && this.archivoEvidencia) {
         const fileExt = this.archivoEvidencia.name.split('.').pop();
         const fileName = `${new Date().getTime()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -245,11 +244,11 @@ export class OperadorComponent implements OnInit {
         urlFoto = publicUrlData.publicUrl;
       }
 
-      // 2. GUARDAR EL VIAJE INDIVIDUAL (Línea de tiempo para el Administrador)
+      // GUARDAR EL VIAJE INDIVIDUAL
       const entregaIndividual = {
         despacho_id: r.id,
-        v05: v.v05, v10: v.v10, vm15: v.vm15, v15: v.v15, v45: v.v45,
-        m05: v.m05, m10: v.m10, mm15: v.mm15, m15: v.m15, m45: v.m45,
+        v05: v.v05, v10: v.v10, v15: v.v15, v45: v.v45,
+        m05: v.m05, m10: v.m10, m15: v.m15, m45: v.m45,
         foto_merma_url: urlFoto, 
         cambio_programacion: v.cambio_programacion,
         tipo_movimiento_cilindro: v.tipo_movimiento_cilindro,
@@ -259,7 +258,7 @@ export class OperadorComponent implements OnInit {
       const { error: insertError } = await this.supabase.from('entregas_parciales').insert(entregaIndividual);
       if (insertError) throw insertError;
 
-      // ACUMULADOR (Limpio)
+      // ACUMULADOR MAESTRO
       const newV05 = (r.v05 || 0) + v.v05;
       const newV10 = (r.v10 || 0) + v.v10;
       const newV15 = (r.v15 || 0) + v.v15;
@@ -273,7 +272,6 @@ export class OperadorComponent implements OnInit {
       const totalVendidoHistorico = newV05 + newV10 + newV15 + newV45;
       const totalMermasHistorico = newM05 + newM10 + newM15 + newM45;
       
-      // EL ESTADO AHORA SUMA VENTAS + MERMAS PARA LLEGAR AL 100%
       const totalProcesado = totalVendidoHistorico + totalMermasHistorico;
       const totalProg = (r.p05||0) + (r.p10||0) + (r.p15||0) + (r.p45||0);
       

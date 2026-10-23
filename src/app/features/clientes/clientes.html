@@ -1,94 +1,111 @@
-<div class="space-y-6 relative h-full">
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="space-y-6 relative h-full flex flex-col p-2 sm:p-4">
+  
+  <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 shrink-0">
     <div>
       <h1 class="text-2xl font-bold text-slate-800">Directorio de Clientes</h1>
-      <p class="text-sm text-slate-500">Gestión de distribuidoras, grifos y empresas corporativas</p>
+      <p class="text-sm text-slate-500">Gestión de base de datos Retail e Industrias (B2B)</p>
     </div>
-    <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
-      
-      <!-- BOTONES DE ADMINISTRACIÓN -->
+    
+    <!-- SWITCH DINÁMICO DE VISTA -->
+    <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto">
+      <button 
+        (click)="cambiarModoVista('DISTRIBUIDORES')"
+        class="flex-1 sm:flex-none px-6 py-2 rounded-md font-bold text-sm transition-all duration-300"
+        [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-[#4F46E5] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'">
+        DISTRIBUIDORES
+      </button>
+      <button 
+        (click)="cambiarModoVista('INDUSTRIAS')"
+        class="flex-1 sm:flex-none px-6 py-2 rounded-md font-bold text-sm transition-all duration-300"
+        [ngClass]="modoVista === 'INDUSTRIAS' ? 'bg-[#4F46E5] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'">
+        INDUSTRIAS (B2B)
+      </button>
+    </div>
+
+    <div class="flex items-center gap-3 w-full xl:w-auto flex-wrap">
       <ng-container *ngIf="userRole === 'ADMIN'">
-        <button (click)="confirmDeleteAll()" class="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2">
+        <button (click)="confirmDeleteAll()" class="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2" title="Vaciar Directorio">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-          Vaciar DB
         </button>
 
         <input type="file" #fileInput accept=".xlsx, .xls" class="hidden" (change)="importarExcel($event)">
-        <button (click)="fileInput.click()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <button (click)="fileInput.click()" 
+          class="flex-1 sm:flex-none text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
+          [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-          Sincronizar DB
+          Sincronizar {{ modoVista === 'DISTRIBUIDORES' ? 'Distribuidores' : 'Industrias' }}
         </button>
       </ng-container>
 
-      <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2.5 rounded-lg font-medium shadow-sm flex items-center justify-center gap-2">
+      <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#1E1B4B] hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg font-bold shadow-sm flex items-center justify-center gap-2 transition-colors">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         Nuevo Cliente
       </button>
     </div>
   </div>
 
-  <!-- BÚSQUEDA Y CONTADORES -->
-  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-0 shrink-0">
     <div class="w-full sm:w-96 relative">
       <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <input type="text" [(ngModel)]="terminoBusqueda" (ngModelChange)="onSearchChange()" placeholder="Buscar por Nombre, RUC o Código..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all">
+      <input type="text" [(ngModel)]="terminoBusqueda" (ngModelChange)="onSearchChange()" placeholder="Buscar por Nombre, RUC o Código..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all uppercase">
     </div>
     <div class="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-      Registros Totales: <span class="text-[#4F46E5]">{{ clientesFiltrados.length }}</span>
+      <span class="w-2 h-2 rounded-full animate-pulse" [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-500' : 'bg-teal-500'"></span>
+      Registros en {{ modoVista }}: <span class="text-[#4F46E5]">{{ clientesFiltrados.length }}</span>
     </div>
   </div>
 
-  <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[500px] relative">
-    
-    <div *ngIf="isLoading" class="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
-      <div class="flex flex-col items-center gap-3">
-        <div class="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
-        <p class="font-bold text-indigo-900 animate-pulse">Sincronizando Base de Datos...</p>
-      </div>
+  <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
+    <div class="flex flex-col items-center gap-3">
+      <div class="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+      <p class="font-bold text-indigo-900 animate-pulse">Procesando Base de Datos...</p>
     </div>
+  </div>
 
-    <div class="overflow-x-auto flex-1">
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1 relative z-0">
+    <div class="overflow-y-auto flex-1 custom-scrollbar">
       <table class="w-full text-left border-collapse whitespace-nowrap">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase tracking-wider font-bold">
-            <th class="p-4">Código / Empresa</th>
-            <th class="p-4">RUC / Contacto</th>
-            <th class="p-4">Ubicación y Zona</th>
+        <thead class="sticky top-0 z-10 bg-slate-50 shadow-sm border-b border-slate-200">
+          <tr class="text-slate-500 text-xs uppercase tracking-wider font-bold">
+            <th class="p-4">Cliente / Razón Social</th>
+            <th class="p-4 text-center">Identificadores</th>
+            <th class="p-4 w-1/3">Ubicación</th>
             <th class="p-4 text-center">Estado</th>
             <th class="p-4 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-sm">
           <tr *ngIf="clientesFiltrados.length === 0 && !isLoading">
-            <td colspan="5" class="p-8 text-center text-slate-400">
-              No se encontraron clientes. Ajuste la búsqueda o sincronice el Excel.
-            </td>
+            <td colspan="5" class="p-10 text-center text-slate-400 font-medium">No se encontraron clientes de {{ modoVista }}. Ajuste la búsqueda o sincronice el Excel.</td>
           </tr>
           
-          <tr *ngFor="let reg of clientesFiltrados | slice: (paginaActual-1)*itemsPorPagina : paginaActual*itemsPorPagina" class="hover:bg-slate-50 transition-colors">
+          <tr *ngFor="let reg of clientesFiltrados | slice: (paginaActual-1)*itemsPorPagina : paginaActual*itemsPorPagina" class="hover:bg-slate-50 transition-colors" [class.opacity-50]="!reg.estado">
             <td class="p-4">
               <div class="text-[10px] font-black text-slate-400 mb-0.5">CÓD: {{ reg.codigo_cliente }}</div>
               <div class="font-bold text-[#4F46E5] truncate max-w-[300px]" [title]="reg.razon_social">{{ reg.razon_social }}</div>
             </td>
-            <td class="p-4">
-              <div class="font-mono text-slate-800">{{ reg.ruc || 'SIN RUC' }}</div>
-              <div class="text-slate-500 text-xs mt-0.5">{{ reg.contacto || 'Sin contacto' }} <span class="text-slate-400 ml-1">{{ reg.telefono }}</span></div>
+            <td class="p-4 text-center">
+              <div class="flex flex-col items-center gap-1 text-xs">
+                <span *ngIf="reg.ruc" class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-medium">RUC: {{ reg.ruc }}</span>
+                <span *ngIf="reg.codigo_cliente" class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 font-bold">SAP: {{ reg.codigo_cliente }}</span>
+                <span *ngIf="!reg.ruc && !reg.codigo_cliente" class="text-slate-400 italic">S/N</span>
+              </div>
             </td>
             <td class="p-4">
-              <div class="font-bold text-slate-700">{{ reg.zona || 'Sin Zona' }}</div>
-              <div class="text-slate-500 text-xs truncate max-w-[200px]" [title]="reg.direccion">{{ reg.direccion }}, {{ reg.distrito || 'Sin Distrito' }}</div>
+              <div class="text-slate-600 truncate max-w-xs font-medium">{{ reg.direccion || 'Sin dirección registrada' }}</div>
+              <div class="text-slate-400 text-xs mt-1 font-bold">{{ reg.distrito || '-' }}</div>
             </td>
             <td class="p-4 text-center">
-              <span class="px-2 py-1 rounded text-[10px] font-bold" [ngClass]="reg.estado ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'">
+              <span class="px-3 py-1 rounded-full text-[10px] font-bold border" 
+                [ngClass]="reg.estado ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'">
                 {{ reg.estado ? 'ACTIVO' : 'INACTIVO' }}
               </span>
             </td>
             <td class="p-4 text-right space-x-2">
-              <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded transition-colors" title="Editar">
+              <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-white rounded-lg transition-colors border border-slate-200 shadow-sm" title="Editar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
               </button>
-              <button *ngIf="userRole === 'ADMIN'" (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded transition-colors" title="Eliminar">
+              <button *ngIf="userRole === 'ADMIN'" (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-white rounded-lg transition-colors border border-slate-200 shadow-sm" title="Desactivar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
               </button>
             </td>
@@ -97,8 +114,7 @@
       </table>
     </div>
 
-    <!-- CONTROLES DE PAGINACIÓN -->
-    <div class="bg-slate-50 border-t border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-center gap-4 rounded-b-xl shrink-0">
+    <div *ngIf="clientesFiltrados.length > 0" class="bg-slate-50 border-t border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
       <div class="text-xs text-slate-500 font-medium">
         Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }} - 
         <span *ngIf="paginaActual * itemsPorPagina < clientesFiltrados.length">{{ paginaActual * itemsPorPagina }}</span>
@@ -123,11 +139,10 @@
   </div>
 </div>
 
-<!-- Formulario de Registro/Edición -->
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
-      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'EDITAR CLIENTE' : 'NUEVO CLIENTE / DISTRIBUIDOR' }}</h2>
+      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'EDITAR CLIENTE' : 'NUEVO CLIENTE (' + modoVista + ')' }}</h2>
       <button (click)="closeForm()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
@@ -143,26 +158,26 @@
         </div>
         <div class="md:col-span-2">
           <label class="block text-xs font-bold text-slate-500 mb-1">RAZÓN SOCIAL / EMPRESA</label>
-          <input type="text" formControlName="razon_social" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="razon_social" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
         <div class="md:col-span-2">
           <label class="block text-xs font-bold text-slate-500 mb-1">DIRECCIÓN PRINCIPAL</label>
-          <input type="text" formControlName="direccion" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="direccion" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">ZONA (Ej. LIMA LOCAL)</label>
-          <input type="text" formControlName="zona" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="zona" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">DISTRITO</label>
-          <input type="text" formControlName="distrito" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="distrito" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">TIPO CLIENTE (Ej. GRANJA)</label>
-          <input type="text" formControlName="tipo_cliente" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="tipo_cliente" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">TELÉFONO / CELULAR</label>
@@ -170,7 +185,7 @@
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">CONTACTO (GERENCIA)</label>
-          <input type="text" formControlName="contacto" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+          <input type="text" formControlName="contacto" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">CORREO ELECTRÓNICO</label>
@@ -193,7 +208,6 @@
   </div>
 </div>
 
-<!-- Modal Eliminar 1 -->
 <app-confirm-modal 
   [isOpen]="showDeleteConfirm" 
   title="¿Eliminar Cliente?" 
@@ -203,7 +217,6 @@
   (cancel)="cancelDelete()">
 </app-confirm-modal>
 
-<!-- Modal Eliminar TODOS -->
 <app-confirm-modal 
   [isOpen]="showDeleteAllConfirm" 
   title="⚠️ PELIGRO: VACIAR DIRECTORIO" 
@@ -212,3 +225,10 @@
   (confirm)="executeDeleteAll()" 
   (cancel)="cancelDeleteAll()">
 </app-confirm-modal>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>

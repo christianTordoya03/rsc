@@ -16,6 +16,8 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 export class ProgramacionRutasComponent implements OnInit {
   @ViewChild('fileInput') fileInput!: ElementRef;
 
+  modoVista: 'DISTRIBUIDORES' | 'INDUSTRIAS' = 'DISTRIBUIDORES';
+
   showForm = false;
   isLoading = false;
   isEditing = false;
@@ -65,10 +67,7 @@ export class ProgramacionRutasComponent implements OnInit {
   }
 
   async ngOnInit() {
-    const erroresGuardados = localStorage.getItem('rutasErroresClientes');
-    if (erroresGuardados) {
-      this.clientesNoEncontrados = JSON.parse(erroresGuardados);
-    }
+    this.cargarErroresGuardados();
 
     const { data: { session } } = await this.supabase.auth.getSession();
     if (session) {
@@ -82,33 +81,49 @@ export class ProgramacionRutasComponent implements OnInit {
     await this.cargarRutasDelDia();
   }
 
+  cambiarModoVista(modo: 'DISTRIBUIDORES' | 'INDUSTRIAS') {
+    this.modoVista = modo;
+    this.paginaPendientes = 1;
+    this.paginaHistorial = 1;
+    this.cargarErroresGuardados(); 
+  }
+
+  cargarErroresGuardados() {
+    const erroresGuardados = localStorage.getItem('rutasErroresClientes_' + this.modoVista);
+    if (erroresGuardados) {
+      this.clientesNoEncontrados = JSON.parse(erroresGuardados);
+    } else {
+      this.clientesNoEncontrados = [];
+    }
+  }
+
   cerrarPanelErrores() {
     this.clientesNoEncontrados = [];
-    localStorage.removeItem('rutasErroresClientes');
+    localStorage.removeItem('rutasErroresClientes_' + this.modoVista);
   }
 
   async cargarDatosBase() {
     try {
       let todosLosClientes: any[] = [];
-      let hayMasDatos = true;
       let desde = 0;
-      const limite = 1000;
+      const paso = 500;
 
-      while (hayMasDatos) {
-        const { data, error } = await this.supabase.clientes
-          .select('id, razon_social, ruc, codigo_cliente')
+      while (true) {
+        const { data, error } = await this.supabase.from('clientes')
+          .select('id, razon_social, ruc, codigo_cliente, tipo_cliente') 
           .eq('estado', true)
-          .range(desde, desde + limite - 1);
+          .order('id', { ascending: true }) 
+          .range(desde, desde + paso - 1);
 
         if (error) throw error;
-        if (data && data.length > 0) {
-          todosLosClientes = [...todosLosClientes, ...data];
-          desde += limite;
-          if (data.length < limite) hayMasDatos = false;
-        } else {
-          hayMasDatos = false;
-        }
+        if (!data || data.length === 0) break;
+
+        todosLosClientes.push(...data);
+        if (data.length < paso) break;
+        desde += paso;
       }
+      
+      todosLosClientes.sort((a, b) => (a.razon_social || '').localeCompare(b.razon_social || ''));
       this.clientesActivos = todosLosClientes;
     } catch (error) {
       this.toast.showError('Error al cargar clientes');
@@ -119,7 +134,7 @@ export class ProgramacionRutasComponent implements OnInit {
     this.isLoading = true;
     try {
       const { data, error } = await this.supabase.despachos
-        .select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
+        .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
         .order('creado_en', { ascending: false });
 
       if (error) throw error;
@@ -143,8 +158,28 @@ export class ProgramacionRutasComponent implements OnInit {
     return matchPlaca && matchCliente;
   }
 
-  get rutasPendientes() { return this.rutas.filter(r => (r.estado === 'PENDIENTE' || r.estado === 'EN_RUTA' || r.estado === 'EN_PROCESO') && this.cumpleFiltros(r)); }
-  get rutasHistorial() { return this.rutas.filter(r => (r.estado === 'COMPLETADO' || r.estado === 'ANULADO') && this.cumpleFiltros(r)); }
+  get rutasPendientes() { 
+    return this.rutas.filter(r => {
+      const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
+      const coincideModo = this.modoVista === origen;
+      return coincideModo && (r.estado === 'PENDIENTE' || r.estado === 'EN_RUTA' || r.estado === 'EN_PROCESO') && this.cumpleFiltros(r);
+    }); 
+  }
+
+  get rutasHistorial() { 
+    return this.rutas.filter(r => {
+      const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
+      const coincideModo = this.modoVista === origen;
+      return coincideModo && (r.estado === 'COMPLETADO' || r.estado === 'ANULADO') && this.cumpleFiltros(r);
+    }); 
+  }
+
+  get clientesParaFormulario() {
+    return this.clientesActivos.filter(c => {
+      if (this.modoVista === 'INDUSTRIAS') return c.tipo_cliente === 'B2B/INDUSTRIAS';
+      return c.tipo_cliente !== 'B2B/INDUSTRIAS';
+    });
+  }
 
   get totalPaginasPendientes() { return Math.ceil(this.rutasPendientes.length / this.itemsPorPagina) || 1; }
   cambiarPaginaPendientes(delta: number) {
@@ -216,30 +251,18 @@ export class ProgramacionRutasComponent implements OnInit {
     return null;
   }
 
-  getNombreRealEnFila(row: any, colInicio: number): string {
-    const ignorar = ['CAMBIO', 'BLOQUEADO', 'RECOJO', 'ENTREGA', 'PEDIDO', 'LIMA', 'CHICO', 'SUR', 'NORTE', 'ANULADO'];
-    for (let i = colInicio; i <= colInicio + 5; i++) {
-      const val = this.getCellValueText(row.getCell(i));
-      if (val && val.length > 4 && /[A-Z]{3,}/.test(val)) {
-        const esInvalido = ignorar.some(ig => val.includes(ig));
-        if (!esInvalido) return val; 
-      }
-    }
-    return '';
-  }
-
   async importarExcel(event: any) {
     const file = event.target.files[0];
     if (!file) return;
 
     this.isLoading = true;
-    this.toast.showInfo('Analizando Excel Logístico...');
+    this.toast.showInfo(`Analizando Excel de ${this.modoVista}...`);
 
     try {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(await file.arrayBuffer());
       
-      const worksheet = workbook.getWorksheet('Programacion') || workbook.worksheets[0];
+      const worksheet = workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
       const sheetInicial = workbook.getWorksheet('PROGRAMACION INICIAL'); 
 
       const normalize = (str: string) => str ? str.trim().toUpperCase().replace(/\s+/g, ' ') : '';
@@ -275,7 +298,7 @@ export class ProgramacionRutasComponent implements OnInit {
 
             if (/^4[45]\d{5}/.test(valClean)) pedido = valClean;
             else if (/^(10|20|30)\d{5}$/.test(valClean)) codSap = valClean;
-            else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION'].includes(val)) {
+            else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION', 'NOMBRE', 'NOMBRE DE CLIENTE'].includes(val)) {
               if (!nombre) nombre = val; 
             }
           }
@@ -284,14 +307,23 @@ export class ProgramacionRutasComponent implements OnInit {
         });
       }
 
+      // ==== BÚSQUEDA BLINDADA CON PREFIJOS AUTOMÁTICOS ====
       const findClienteId = (texto: string) => {
         if (!texto) return null;
         const t = normalize(texto);
-        if (t === 'DISTRIBUIDOR' || t === 'CLIENTE' || t === 'DIRECCION' || t === 'NOMBRE') return null;
+        if (['DISTRIBUIDOR', 'CLIENTE', 'DIRECCION', 'NOMBRE', 'NOMBRE DE CLIENTE'].includes(t)) return null;
 
         const matchNum = t.match(/\b(10|20|30)\d{4,6}\b/);
-        if (matchNum && mapCodigos.has(matchNum[0])) return mapCodigos.get(matchNum[0]);
+        if (matchNum) {
+          const cod = matchNum[0];
+          // Búsqueda inteligente: inyecta el prefijo si estamos en Industrias
+          if (this.modoVista === 'INDUSTRIAS' && mapCodigos.has('B2B-' + cod)) {
+             return mapCodigos.get('B2B-' + cod);
+          }
+          if (mapCodigos.has(cod)) return mapCodigos.get(cod);
+        }
 
+        if (this.modoVista === 'INDUSTRIAS' && mapCodigos.has('B2B-' + t)) return mapCodigos.get('B2B-' + t);
         if (mapCodigos.has(t)) return mapCodigos.get(t); 
         if (mapRucs.has(t)) return mapRucs.get(t);
         if (mapNombres.has(t)) return mapNombres.get(t);
@@ -309,187 +341,263 @@ export class ProgramacionRutasComponent implements OnInit {
         return null;
       };
 
-      let colPlaca = 0, colTransportes = 0, colPedido = 0, colEntrega = 0, colDistribuidor = 0; 
-      let colLimite = 999; 
+      const nuevasRutas: any[] = [];
+      const noEncontrados = new Set<string>();
       
-      const cols05: number[] = [];
-      const cols10: number[] = [];
-      const cols15: number[] = [];
-      const cols45: number[] = [];
-
-      worksheet.eachRow((row: any, rowNum: number) => {
-        if (rowNum <= 5) { 
-          row.eachCell((cell: any, colNum: number) => {
-            const val = this.getCellValueText(cell);
-            
-            if (val.includes('TOTAL KG') || val === 'TOTAL') {
-                if (colNum < colLimite) colLimite = colNum;
-            }
-            
-            if (val === 'PLACA' && colPlaca === 0) colPlaca = colNum;
-            if (val === 'TRANSPORTES' && colTransportes === 0) colTransportes = colNum;
-            if (val === 'PEDIDO' && colPedido === 0) colPedido = colNum;
-            if (val === 'ENTREGA' && colEntrega === 0) colEntrega = colNum;
-            if ((val === 'DISTRIBUIDOR' || val === 'CLIENTE' || val === 'DESTINATARIO' || val === 'NOMBRE' || val === 'RAZON SOCIAL') && colDistribuidor === 0) colDistribuidor = colNum;
-
-            if (colNum < colLimite) {
-                const valLimpio = val.replace(/\s+/g, '');
-                if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.push(colNum);
-                if (valLimpio.includes('10KG')) cols10.push(colNum);
-                if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.push(colNum);
-                if (valLimpio.includes('45KG')) cols45.push(colNum);
-            }
-          });
-        }
-      });
-
-      if (colPlaca === 0) colPlaca = 1;
-      if (colPedido === 0) colPedido = 3;
-      if (colEntrega === 0) colEntrega = 4;
-      if (colDistribuidor === 0) colDistribuidor = 5; 
-
       let fechaProg = new Date().toISOString().split('T')[0];
       const celdaFechaA = worksheet.getCell('A2').value;
       if (celdaFechaA instanceof Date) fechaProg = celdaFechaA.toISOString().split('T')[0];
 
-      const nuevasRutas: any[] = [];
-      const noEncontrados = new Set<string>();
-      
       let placaEnMemoria = '';
       let obsEnMemoria: string | null = null; 
-
       const palabrasIgnoradas = ['CAMBIO', 'BLOQUEADO', 'BLOQUEAD', 'RECOJO', 'VACIO', 'ANULADO'];
 
-      worksheet.eachRow((row: any, rowNumber: number) => {
-        if (rowNumber < 5) return; 
-
-        let esSubTotal = false;
-        for (let i = 1; i <= 10; i++) {
-          const valC = this.getCellValueText(row.getCell(i));
-          if (valC.includes('SUB TOTAL') || valC.includes('SUBTOTAL') || valC === 'TOTAL') {
-             esSubTotal = true;
-             break;
+      if (this.modoVista === 'INDUSTRIAS') {
+        let cPlaca = 0, cTrans = 0, cCliente = 0, cCant = 0, cTipo = 0, cObs = 0, cEntrega = 0;
+        let headerRow = -1;
+        
+        worksheet.eachRow((row: any, rowNum: number) => {
+          if (rowNum <= 10 && headerRow === -1) {
+            row.eachCell((cell: any, colNum: number) => {
+              const val = this.getCellValueText(cell).toUpperCase();
+              if (val === 'UNIDAD') cPlaca = colNum;
+              if (val === 'N° TRANSPORTE') cTrans = colNum;
+              if (val === 'NOMBRE DE CLIENTE') { cCliente = colNum; headerRow = rowNum; }
+              if (val === 'CANT.' || val === 'CANTIDAD') cCant = colNum;
+              if (val === 'TIPO DE PRODUCTO') cTipo = colNum;
+              if (val === 'OBSERVACION') cObs = colNum;
+              if (val === 'N° ENTREGA' || val === 'ENTREGA') cEntrega = colNum;
+            });
           }
-        }
-        if (esSubTotal) return; 
+        });
 
-        let p05 = 0, p10 = 0, p15 = 0, p45 = 0;
-        cols05.forEach((c: number) => p05 += this.getCellValueNum(row.getCell(c)));
-        cols10.forEach((c: number) => p10 += this.getCellValueNum(row.getCell(c)));
-        cols15.forEach((c: number) => p15 += this.getCellValueNum(row.getCell(c)));
-        cols45.forEach((c: number) => p45 += this.getCellValueNum(row.getCell(c)));
+        if (headerRow === -1) throw new Error('No se detectó el formato de Industrias (Falta columna "NOMBRE DE CLIENTE").');
 
-        const sumaCilindros = p05 + p10 + p15 + p45;
+        const rutasAgrupadas = new Map<string, any>();
 
-        const txtColPlaca = this.getCellValueText(row.getCell(colPlaca));
-        const txtColTrans = colTransportes > 0 ? this.getCellValueText(row.getCell(colTransportes)) : '';
-        const txtPedido = this.getCellValueText(row.getCell(colPedido));
-        const txtEntrega = this.getCellValueText(row.getCell(colEntrega));
+        worksheet.eachRow((row: any, rowNumber: number) => {
+          if (rowNumber <= headerRow) return;
 
-        let esRecojo = false;
-        let cartelLogistico: string | null = null;
+          const txtPlaca = this.getCellValueText(row.getCell(cPlaca));
+          const txtTrans = this.getCellValueText(row.getCell(cTrans));
+          const txtCliente = this.getCellValueText(row.getCell(cCliente));
+          const cant = this.getCellValueNum(row.getCell(cCant));
+          const tipo = this.getCellValueText(row.getCell(cTipo)).toUpperCase();
+          const obs = this.getCellValueText(row.getCell(cObs));
+          const txtEntrega = this.getCellValueText(row.getCell(cEntrega));
 
-        if (txtEntrega.includes('RECOJO') || txtPedido.includes('RECOJO')) {
-          esRecojo = true;
-          cartelLogistico = '📦 RECOJO';
-        } else if (txtEntrega.includes('BLOQUEAD') || txtPedido.includes('BLOQUEAD') || txtEntrega.includes('CAMBIO') || txtPedido.includes('CAMBIO')) {
-          esRecojo = true;
-          cartelLogistico = '🚫 ' + (txtEntrega.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
-        }
+          if (!txtCliente) return;
 
-        if (sumaCilindros === 0 && !esRecojo) {
-          return;
-        }
+          let cartelLogistico: string | null = null;
+          let esRecojo = false;
 
-        const combiTexto = txtColPlaca + ' ' + txtColTrans;
-        if (combiTexto.includes('2 VUELT') || combiTexto.includes('2DA VUELT')) {
-          cartelLogistico = cartelLogistico ? cartelLogistico + ' | 2da Vuelta' : '♻️ 2da Vuelta';
-        }
+          if (txtEntrega.includes('RECOJO') || obs.toUpperCase().includes('RECOJO')) {
+            esRecojo = true; cartelLogistico = '📦 RECOJO';
+          } else if (txtEntrega.includes('BLOQUEAD') || txtEntrega.includes('CAMBIO')) {
+            esRecojo = true; cartelLogistico = '🚫 ' + (txtEntrega.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
+          }
 
-        const placaA = this.encontrarPlacaOficial(txtColPlaca);
-        const placaB = this.encontrarPlacaOficial(txtColTrans);
+          if (cant === 0 && !esRecojo) return;
 
-        if (placaA) {
-          placaEnMemoria = placaA;
-          obsEnMemoria = cartelLogistico; 
-        } else if (placaB) {
-          placaEnMemoria = placaB;
-          obsEnMemoria = cartelLogistico;
-        }
-
-        let placaFinal = placaEnMemoria || 'SIN PLACA'; 
-        let obsFinal = cartelLogistico || obsEnMemoria;
-
-        const placaSecuestradora = this.encontrarPlacaOficial(txtEntrega);
-        if (placaSecuestradora && !esRecojo) {
-          placaFinal = placaSecuestradora; 
-          obsFinal = '🚚 Reasignado'; 
-        }
-
-        let textoBusqueda = this.getCellValueText(row.getCell(colDistribuidor));
-        const textoLimpio = textoBusqueda.toUpperCase().trim();
-        
-        if (palabrasIgnoradas.some(palabra => textoLimpio === palabra || textoLimpio.includes(palabra))) {
-          return; 
-        }
-
-        if ((!textoBusqueda || textoBusqueda === '0') && txtPedido) {
-          textoBusqueda = mapPedidoADistribuidor.get(txtPedido) || '';
-        }
-
-        if (!textoBusqueda || textoBusqueda === '0') {
-           noEncontrados.add(`Fila ${rowNumber}`);
-           return; 
-        }
-
-        let busquedaAvanzada = textoBusqueda;
-        const matchN = textoBusqueda.match(/\b(10|20|30)\d{4,6}\b/);
-        if (matchN) busquedaAvanzada = matchN[0];
-
-        const clienteId = findClienteId(busquedaAvanzada);
-        
-        // ====== LÓGICA ULTRA LIMPIA: SOLO LA FILA O FILA + NOMBRE REAL ======
-        if (!clienteId) {
-          const valorExactoDistribuidor = this.getCellValueText(row.getCell(colDistribuidor));
+          const placaA = this.encontrarPlacaOficial(txtPlaca);
+          const placaB = this.encontrarPlacaOficial(txtTrans);
           
-          // Verificamos si el valor capturado tiene al menos una letra (no es un código SAP puro)
-          if (valorExactoDistribuidor && /[A-Za-z]/.test(valorExactoDistribuidor) && valorExactoDistribuidor !== '0') {
-             noEncontrados.add(`Fila ${rowNumber}: ${valorExactoDistribuidor}`);
-          } else {
-             // Si está vacío, es '0', o es puro número (3031507), mostramos SOLO la fila
-             noEncontrados.add(`Fila ${rowNumber}`);
-          }
-          return;
-        }
+          if (placaA) { placaEnMemoria = placaA; obsEnMemoria = cartelLogistico; }
+          else if (placaB) { placaEnMemoria = placaB; obsEnMemoria = cartelLogistico; }
 
-        if (placaFinal && clienteId && (sumaCilindros > 0 || esRecojo)) {
-          nuevasRutas.push({
-            fecha_despacho: fechaProg,
-            placa: placaFinal, 
-            cliente_id: clienteId,
-            observacion: obsFinal, 
-            p05, p10, p15, p45,
-            estado: 'PENDIENTE', venta_real: 0, merma: 0,
-            programador_nombre: this.userName
-          });
-        }
-      });
+          let placaFinal = placaEnMemoria || 'SIN PLACA';
+          let obsFinal = cartelLogistico || obsEnMemoria || obs;
+
+          const textoLimpio = txtCliente.toUpperCase().trim();
+          if (palabrasIgnoradas.some(p => textoLimpio === p || textoLimpio.includes(p))) return;
+
+          const clienteId = findClienteId(txtCliente);
+
+          if (!clienteId) {
+             if (/[A-Za-z]/.test(txtCliente) && txtCliente !== '0') {
+               noEncontrados.add(`Fila ${rowNumber}: ${txtCliente}`);
+             } else {
+               noEncontrados.add(`Fila ${rowNumber}`);
+             }
+             return;
+          }
+
+          const mapKey = `${placaFinal}_${clienteId}`;
+          if (!rutasAgrupadas.has(mapKey)) {
+            rutasAgrupadas.set(mapKey, {
+              fecha_despacho: fechaProg, placa: placaFinal, cliente_id: clienteId,
+              observacion: obsFinal || '', p05: 0, p10: 0, p15: 0, p45: 0,
+              estado: 'PENDIENTE', venta_real: 0, merma: 0, programador_nombre: this.userName,
+              tipo_negocio: this.modoVista 
+            });
+          }
+
+          const ruta = rutasAgrupadas.get(mapKey);
+          
+          if (tipo.includes('5') && !tipo.includes('15') && !tipo.includes('45')) ruta.p05 += cant;
+          if (tipo.includes('10')) ruta.p10 += cant;
+          if (tipo.includes('15')) ruta.p15 += cant;
+          if (tipo.includes('45')) ruta.p45 += cant;
+
+          if (obsFinal && obsFinal !== ruta.observacion) {
+            if (!ruta.observacion.includes(obsFinal)) {
+               ruta.observacion = ruta.observacion ? `${ruta.observacion} | ${obsFinal}` : obsFinal;
+            }
+          }
+        });
+
+        nuevasRutas.push(...Array.from(rutasAgrupadas.values()));
+
+      } else {
+        let colPlaca = 0, colTransportes = 0, colPedido = 0, colEntrega = 0, colDistribuidor = 0; 
+        let colLimite = 999; 
+        const cols05: number[] = [], cols10: number[] = [], cols15: number[] = [], cols45: number[] = [];
+
+        worksheet.eachRow((row: any, rowNum: number) => {
+          if (rowNum <= 5) { 
+            row.eachCell((cell: any, colNum: number) => {
+              const val = this.getCellValueText(cell);
+              if (val.includes('TOTAL KG') || val === 'TOTAL') {
+                  if (colNum < colLimite) colLimite = colNum;
+              }
+              if (val === 'PLACA' && colPlaca === 0) colPlaca = colNum;
+              if (val === 'TRANSPORTES' && colTransportes === 0) colTransportes = colNum;
+              if (val === 'PEDIDO' && colPedido === 0) colPedido = colNum;
+              if (val === 'ENTREGA' && colEntrega === 0) colEntrega = colNum;
+              if ((val === 'DISTRIBUIDOR' || val === 'CLIENTE' || val === 'DESTINATARIO' || val === 'NOMBRE' || val === 'RAZON SOCIAL') && colDistribuidor === 0) colDistribuidor = colNum;
+
+              if (colNum < colLimite) {
+                  const valLimpio = val.replace(/\s+/g, '');
+                  if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.push(colNum);
+                  if (valLimpio.includes('10KG')) cols10.push(colNum);
+                  if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.push(colNum);
+                  if (valLimpio.includes('45KG')) cols45.push(colNum);
+              }
+            });
+          }
+        });
+
+        if (colPlaca === 0) colPlaca = 1;
+        if (colPedido === 0) colPedido = 3;
+        if (colEntrega === 0) colEntrega = 4;
+        if (colDistribuidor === 0) colDistribuidor = 5; 
+
+        worksheet.eachRow((row: any, rowNumber: number) => {
+          if (rowNumber < 5) return; 
+
+          let esSubTotal = false;
+          for (let i = 1; i <= 10; i++) {
+            const valC = this.getCellValueText(row.getCell(i));
+            if (valC.includes('SUB TOTAL') || valC.includes('SUBTOTAL') || valC === 'TOTAL') {
+               esSubTotal = true; break;
+            }
+          }
+          if (esSubTotal) return; 
+
+          let p05 = 0, p10 = 0, p15 = 0, p45 = 0;
+          cols05.forEach((c: number) => p05 += this.getCellValueNum(row.getCell(c)));
+          cols10.forEach((c: number) => p10 += this.getCellValueNum(row.getCell(c)));
+          cols15.forEach((c: number) => p15 += this.getCellValueNum(row.getCell(c)));
+          cols45.forEach((c: number) => p45 += this.getCellValueNum(row.getCell(c)));
+
+          const sumaCilindros = p05 + p10 + p15 + p45;
+
+          const txtColPlaca = this.getCellValueText(row.getCell(colPlaca));
+          const txtColTrans = colTransportes > 0 ? this.getCellValueText(row.getCell(colTransportes)) : '';
+          const txtPedido = this.getCellValueText(row.getCell(colPedido));
+          const txtEntrega = this.getCellValueText(row.getCell(colEntrega));
+
+          let esRecojo = false;
+          let cartelLogistico: string | null = null;
+
+          if (txtEntrega.includes('RECOJO') || txtPedido.includes('RECOJO')) {
+            esRecojo = true; cartelLogistico = '📦 RECOJO';
+          } else if (txtEntrega.includes('BLOQUEAD') || txtPedido.includes('BLOQUEAD') || txtEntrega.includes('CAMBIO') || txtPedido.includes('CAMBIO')) {
+            esRecojo = true; cartelLogistico = '🚫 ' + (txtEntrega.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
+          }
+
+          if (sumaCilindros === 0 && !esRecojo) return;
+
+          const combiTexto = txtColPlaca + ' ' + txtColTrans;
+          if (combiTexto.includes('2 VUELT') || combiTexto.includes('2DA VUELT')) {
+            cartelLogistico = cartelLogistico ? cartelLogistico + ' | 2da Vuelta' : '♻️ 2da Vuelta';
+          }
+
+          const placaA = this.encontrarPlacaOficial(txtColPlaca);
+          const placaB = this.encontrarPlacaOficial(txtColTrans);
+
+          if (placaA) { placaEnMemoria = placaA; obsEnMemoria = cartelLogistico; } 
+          else if (placaB) { placaEnMemoria = placaB; obsEnMemoria = cartelLogistico; }
+
+          let placaFinal = placaEnMemoria || 'SIN PLACA'; 
+          let obsFinal = cartelLogistico || obsEnMemoria;
+
+          const placaSecuestradora = this.encontrarPlacaOficial(txtEntrega);
+          if (placaSecuestradora && !esRecojo) {
+            placaFinal = placaSecuestradora; 
+            obsFinal = '🚚 Reasignado'; 
+          }
+
+          let textoBusqueda = this.getCellValueText(row.getCell(colDistribuidor));
+          const textoLimpio = textoBusqueda.toUpperCase().trim();
+          
+          if (palabrasIgnoradas.some(palabra => textoLimpio === palabra || textoLimpio.includes(palabra))) return; 
+
+          if ((!textoBusqueda || textoBusqueda === '0') && txtPedido) {
+            textoBusqueda = mapPedidoADistribuidor.get(txtPedido) || '';
+          }
+
+          if (!textoBusqueda || textoBusqueda === '0') {
+             noEncontrados.add(`Fila ${rowNumber}`);
+             return; 
+          }
+
+          let busquedaAvanzada = textoBusqueda;
+          const matchN = textoBusqueda.match(/\b(10|20|30)\d{4,6}\b/);
+          if (matchN) busquedaAvanzada = matchN[0];
+
+          const clienteId = findClienteId(busquedaAvanzada);
+          
+          if (!clienteId) {
+            const valorExactoDistribuidor = this.getCellValueText(row.getCell(colDistribuidor));
+            if (valorExactoDistribuidor && /[A-Za-z]/.test(valorExactoDistribuidor) && valorExactoDistribuidor !== '0') {
+               noEncontrados.add(`Fila ${rowNumber}: ${valorExactoDistribuidor}`);
+            } else {
+               noEncontrados.add(`Fila ${rowNumber}`);
+            }
+            return;
+          }
+
+          if (placaFinal && clienteId && (sumaCilindros > 0 || esRecojo)) {
+            nuevasRutas.push({
+              fecha_despacho: fechaProg,
+              placa: placaFinal, 
+              cliente_id: clienteId,
+              observacion: obsFinal, 
+              p05, p10, p15, p45,
+              estado: 'PENDIENTE', venta_real: 0, merma: 0,
+              programador_nombre: this.userName,
+              tipo_negocio: this.modoVista 
+            });
+          }
+        });
+      }
 
       if (noEncontrados.size > 0) {
         this.clientesNoEncontrados = Array.from(noEncontrados);
-        localStorage.setItem('rutasErroresClientes', JSON.stringify(this.clientesNoEncontrados));
+        localStorage.setItem('rutasErroresClientes_' + this.modoVista, JSON.stringify(this.clientesNoEncontrados));
       } else {
         this.cerrarPanelErrores(); 
       }
 
       if (nuevasRutas.length > 0) {
-        const { data, error } = await this.supabase.despachos.insert(nuevasRutas).select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`);
+        const { data, error } = await this.supabase.despachos.insert(nuevasRutas).select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`);
         if (error) throw error;
         this.rutas = [...(data || []), ...this.rutas];
         this.paginaPendientes = 1;
-        this.toast.showSuccess(`Se procesaron ${nuevasRutas.length} rutas correctamente. Faltan ${noEncontrados.size} clientes.`);
+        this.toast.showSuccess(`Se procesaron ${nuevasRutas.length} rutas de ${this.modoVista} correctamente.`);
       } else if (noEncontrados.size === 0) {
-        this.toast.showWarning('No se generó ninguna ruta válida. Revisa el Excel.');
+        this.toast.showWarning(`No se generó ninguna ruta válida. Revisa que el Excel cumpla con el formato ${this.modoVista}.`);
       } else {
         this.toast.showWarning(`Revisión completada. Faltan ${noEncontrados.size} clientes, 0 rutas nuevas asignadas.`);
       }
@@ -517,10 +625,11 @@ export class ProgramacionRutasComponent implements OnInit {
           observacion: v.observacion || null,
           p05: v.p05, p10: v.p10, p15: v.p15, p45: v.p45,
           estado: 'PENDIENTE', venta_real: 0, merma: 0,
-          programador_nombre: this.userName
+          programador_nombre: this.userName,
+          tipo_negocio: this.modoVista 
         };
 
-        const { data, error } = await this.supabase.despachos.insert(payload).select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
+        const { data, error } = await this.supabase.despachos.insert(payload).select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
         if (error) throw error;
         this.rutas.unshift(data);
         this.toast.showSuccess('Carga asignada');
@@ -530,10 +639,11 @@ export class ProgramacionRutasComponent implements OnInit {
           observacion: v.observacion || null,
           p05: v.p05, p10: v.p10, p15: v.p15, p45: v.p45,
           editado_en: new Date().toISOString(),
-          editor_nombre: this.userName
+          editor_nombre: this.userName,
+          tipo_negocio: this.modoVista 
         };
 
-        const { data, error } = await this.supabase.despachos.update(payloadUpdate).eq('id', this.currentEditId).select(`*, clientes ( razon_social ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
+        const { data, error } = await this.supabase.despachos.update(payloadUpdate).eq('id', this.currentEditId).select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
         if (error) throw error;
         
         const idx = this.rutas.findIndex(r => r.id === this.currentEditId);
@@ -567,12 +677,32 @@ export class ProgramacionRutasComponent implements OnInit {
   async executeDeleteAll() {
     this.isLoading = true;
     try {
-      const { error } = await this.supabase.despachos.delete().not('id', 'is', null);
-      if (error) throw error;
-      this.rutas = [];
+      const rutasABorrar = this.rutas.filter(r => {
+        const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
+        return origen === this.modoVista;
+      });
+
+      const ids = rutasABorrar.map(r => r.id);
+
+      if (ids.length === 0) {
+        this.toast.showWarning(`No hay rutas de ${this.modoVista} para eliminar.`);
+        this.cancelDeleteAll();
+        this.isLoading = false;
+        return;
+      }
+
+      const chunkSize = 300;
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { error } = await this.supabase.despachos.delete().in('id', chunk);
+        if (error) throw error;
+      }
+      
+      this.rutas = this.rutas.filter(r => !ids.includes(r.id));
       this.paginaPendientes = 1;
       this.paginaHistorial = 1;
-      this.toast.showSuccess('Todas las rutas fueron eliminadas de la base de datos.');
+      
+      this.toast.showSuccess(`Todas las rutas de ${this.modoVista} fueron eliminadas.`);
       this.cancelDeleteAll();
     } catch (error: any) {
       this.toast.showError('Error al vaciar DB: ' + error.message);

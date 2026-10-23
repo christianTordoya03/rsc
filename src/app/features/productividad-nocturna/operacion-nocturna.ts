@@ -23,7 +23,7 @@ export class OperacionNocturnaComponent implements OnInit {
   showDetalleModal = false;
   isLoading = false;
   registros: any[] = [];
-  registrosCompletos: any[] = []; // Guarda toda la DB para no perderla al filtrar
+  registrosCompletos: any[] = []; 
   nombreResponsable = 'Cargando...'; 
   
   isEditing = false;
@@ -32,7 +32,6 @@ export class OperacionNocturnaComponent implements OnInit {
   recordToDelete: string | null = null;
   registroDetalleActual: any = null;
   
-  // Filtros Main View
   filtroMainInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   filtroMainFin = new Date().toISOString().split('T')[0];
 
@@ -41,12 +40,12 @@ export class OperacionNocturnaComponent implements OnInit {
   dashTotalSalidas = 0;
   dashTotalRetornos = 0;
   dashTotalKg = 0;
-  dashTotalKgDescargados = 0;
+  dashDescargasVaciosQty = 0; // NUEVO: Unidades Vacías
+  dashDescargasLlenosKg = 0;  // NUEVO: Kilos Llenos
   dashDataPlacas: any[] = []; 
 
   reporteForm!: FormGroup;
   
-  // Filtros de Asistencia
   filtroAsistenciaInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   filtroAsistenciaFin = new Date().toISOString().split('T')[0];
   filtroEmpleado = '';
@@ -209,7 +208,7 @@ export class OperacionNocturnaComponent implements OnInit {
       if (error && error.code !== '42P01') throw error;
       
       this.registrosCompletos = data || [];
-      this.aplicarFiltroMain(); // Aplica el rango de fechas al cargar
+      this.aplicarFiltroMain(); 
     } catch (e) { 
       this.toast.showError('Error al cargar historial.'); 
     } finally { 
@@ -217,7 +216,6 @@ export class OperacionNocturnaComponent implements OnInit {
     }
   }
 
-  // ==== FILTRO PRINCIPAL (RANGO FECHAS) ====
   aplicarFiltroMain() {
     this.registros = this.registrosCompletos.filter(reg => {
       return reg.fecha >= this.filtroMainInicio && reg.fecha <= this.filtroMainFin;
@@ -230,11 +228,15 @@ export class OperacionNocturnaComponent implements OnInit {
     this.dashTotalSalidas = 0;
     this.dashTotalRetornos = 0;
     this.dashTotalKg = 0;
-    this.dashTotalKgDescargados = 0;
+    
+    // Reset de nuevas variables
+    this.dashDescargasVaciosQty = 0;
+    this.dashDescargasLlenosKg = 0;
 
     const placasMap = new Map<string, { kg: number, cap: number }>();
 
     this.registros.forEach(r => {
+      // CARGAS
       if (r.datos_formulario?.cargas) {
         this.dashTotalSalidas += r.datos_formulario.cargas.length;
         r.datos_formulario.cargas.forEach((c: any) => {
@@ -249,11 +251,22 @@ export class OperacionNocturnaComponent implements OnInit {
         });
       }
       
+      // DESCARGAS (Lógica separada por Estado)
       if (r.datos_formulario?.descargas) {
         this.dashTotalRetornos += r.datos_formulario.descargas.length;
         r.datos_formulario.descargas.forEach((d: any) => {
-          const kDesc = (Number(d.p05 || 0)*5) + (Number(d.p10 || 0)*10) + (Number(d.p15 || 0)*15) + (Number(d.p45 || 0)*45);
-          this.dashTotalKgDescargados += kDesc;
+          const q05 = Number(d.p05 || 0);
+          const q10 = Number(d.p10 || 0);
+          const q15 = Number(d.p15 || 0);
+          const q45 = Number(d.p45 || 0);
+          
+          if (d.estado === 'Vacíos') {
+             // Solo suma las unidades
+             this.dashDescargasVaciosQty += (q05 + q10 + q15 + q45);
+          } else if (d.estado === 'Llenos') {
+             // Suma los kilos
+             this.dashDescargasLlenosKg += (q05 * 5) + (q10 * 10) + (q15 * 15) + (q45 * 45);
+          }
         });
       }
     });
@@ -331,7 +344,6 @@ export class OperacionNocturnaComponent implements OnInit {
   generarReporteAsistencia() {
     this.asistenciaConsolidada = [];
     this.registrosCompletos.forEach((reg: any) => {
-      // Filtramos por el RANGO DE FECHAS del modal
       if (reg.fecha < this.filtroAsistenciaInicio || reg.fecha > this.filtroAsistenciaFin) return;
       
       const personal = reg.datos_formulario?.colaboradores || [];
@@ -402,7 +414,7 @@ export class OperacionNocturnaComponent implements OnInit {
       const wsDash = workbook.addWorksheet('Dashboard Resumen', { views: [{ showGridLines: false }] });
       
       wsDash.getColumn('A').width = 3;  
-      wsDash.getColumn('B').width = 35; 
+      wsDash.getColumn('B').width = 37; 
       wsDash.getColumn('C').width = 15; 
       wsDash.getColumn('D').width = 4;  
       wsDash.getColumn('E').width = 15; 
@@ -426,9 +438,10 @@ export class OperacionNocturnaComponent implements OnInit {
       const kpis = [
         { label: 'Total Turnos Registrados', val: this.dashTotalTurnos },
         { label: 'Total Camiones Cargados (Salidas)', val: this.dashTotalSalidas },
-        { label: 'Total Camiones Descargados (Retornos)', val: this.dashTotalRetornos },
+        { label: 'Total Unidades con Cilindros Descargados', val: this.dashTotalRetornos },
         { label: 'Volumen Total Cargado (Kg Venta)', val: this.dashTotalKg },
-        { label: 'Volumen Total Descargado (Kg Informativo)', val: this.dashTotalKgDescargados }
+        { label: 'Cilindros Vacíos Descargados (Unidades)', val: this.dashDescargasVaciosQty },
+        { label: 'Cilindros Llenos Descargados (Kg)', val: this.dashDescargasLlenosKg }
       ];
 
       let rowLine = 8;
@@ -446,7 +459,8 @@ export class OperacionNocturnaComponent implements OnInit {
         valCell.alignment = { horizontal: 'right', vertical: 'middle' };
         valCell.border = { right: {style: 'thin', color: {argb: 'FFCBD5E1'}}, bottom: {style: 'thin', color: {argb: 'FFCBD5E1'}}, top: {style: 'thin', color: {argb: 'FFCBD5E1'}} };
         
-        if (idx >= 3) valCell.numFmt = '#,##0 "Kg"';
+        if (idx === 3 || idx === 5) valCell.numFmt = '#,##0 "Kg"';
+        if (idx === 4) valCell.numFmt = '#,##0 "Und"';
         rowLine++;
       });
 

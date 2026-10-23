@@ -4,7 +4,14 @@
       <h1 class="text-2xl font-bold text-slate-800">Control de Combustible y Peajes</h1>
       <p class="text-sm text-slate-500">Auditoría de rendimiento, gastos y prevención de incidencias (GO-F-010)</p>
     </div>
+    
     <div class="flex items-center gap-3 w-full sm:w-auto">
+      
+      <!-- NUEVO: SELECTOR DE PLACA DINÁMICO -->
+      <select [(ngModel)]="filtroPlacaActiva" (change)="filtrarDatos()" class="bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg focus:ring-[#4F46E5] shadow-sm">
+        <option *ngFor="let placa of placasUnicas" [value]="placa">{{ placa === 'TODAS' ? '🎯 Todas las Placas' : '🚚 ' + placa }}</option>
+      </select>
+
       <button (click)="exportarExcel()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
         Exportar
@@ -16,6 +23,7 @@
     </div>
   </div>
 
+  <!-- TARJETAS DE KPI (Ahora se recalcularán si eliges una placa) -->
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
     <div class="lg:col-span-1 space-y-4">
       <div class="bg-emerald-50 rounded-xl p-5 border border-emerald-100 shadow-sm">
@@ -32,12 +40,20 @@
       </div>
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-3">
-      <h3 class="text-sm font-bold text-slate-400 mb-4 uppercase tracking-wide border-b border-slate-100 pb-2">Curva de Rendimiento (Km/Gal)</h3>
+      <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wide">Curva de Rendimiento (Km/Gal)</h3>
+        <span *ngIf="filtroPlacaActiva !== 'TODAS'" class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full text-xs">Viendo: {{ filtroPlacaActiva }}</span>
+      </div>
       <div class="h-64 relative w-full"><canvas #rendimientoChart></canvas></div>
     </div>
   </div>
 
   <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    
+    <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center">
+      <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse whitespace-nowrap">
         <thead>
@@ -51,7 +67,12 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-sm">
-          <tr *ngFor="let reg of registros" class="hover:bg-slate-50 transition-colors">
+          <tr *ngIf="registrosFiltrados.length === 0">
+            <td colspan="6" class="p-8 text-center text-slate-400 font-medium">No se encontraron tickets de combustible para esta placa.</td>
+          </tr>
+          
+          <!-- ATENCIÓN AQUÍ: Ahora recorre 'registrosFiltrados' -->
+          <tr *ngFor="let reg of registrosFiltrados" class="hover:bg-slate-50 transition-colors">
             <td class="p-4">
               <div class="font-bold text-slate-800">{{ reg.placa }}</div>
               <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
@@ -98,10 +119,12 @@
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
           <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+            <option value="" disabled selected>Seleccione la placa...</option>
+            <!-- Placas actualizadas con el formato exacto del modulo de Rutas -->
             <option value="BSY-931">BSY-931</option><option value="AUH-927">AUH-927</option><option value="F6Z-867">F6Z-867</option><option value="BHI-940">BHI-940</option>
             <option value="BBU-840">BBU-840</option><option value="ACK-826">ACK-826</option><option value="BHH-935">BHH-935</option><option value="BBT-751">BBT-751</option>
             <option value="F4D-855">F4D-855</option><option value="AYJ-784">AYJ-784</option><option value="BAN-786">BAN-786</option><option value="B0L-756">B0L-756</option>
-            <option value="F4B-804">F4B-804</option><option value="BEL-713">BEL-713</option>
+            <option value="F4B-804">F4B-804</option><option value="BEL-713">BEL-713</option><option value="F6Y-818">F6Y-818</option>
           </select>
         </div>
         <div>
@@ -114,7 +137,6 @@
         <div><label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label><input type="text" formControlName="conductor" placeholder="Opcional" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
       </div>
 
-      <!-- Cálculos Automáticos de Combustible -->
       <div class="bg-white border border-indigo-100 rounded-xl p-5 mb-5 grid grid-cols-2 md:grid-cols-5 gap-4 shadow-sm items-end">
         <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO INICIAL</label><input type="number" formControlName="odoInicial" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
         <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO FINAL</label><input type="number" formControlName="odoFinal" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
@@ -126,7 +148,6 @@
         <div><label class="block text-xs font-bold text-slate-500 mb-1">PRECIO X GAL</label><input type="number" formControlName="precioGalon" step="0.1" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
       </div>
 
-      <!-- Integración de Peaje y Observaciones -->
       <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">GASTO DE PEAJE (S/)</label>
@@ -139,7 +160,6 @@
         </div>
       </div>
 
-      <!-- Resumen Financiero y Operativo -->
       <div class="grid grid-cols-2 gap-4 mb-2">
         <div class="p-4 rounded-xl text-center border" [ngClass]="rendimiento >= 5 ? 'bg-emerald-50 border-emerald-200' : (rendimiento > 0 ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200')">
           <label class="block text-xs font-bold mb-1" [ngClass]="rendimiento >= 5 ? 'text-emerald-700' : (rendimiento > 0 ? 'text-red-700' : 'text-slate-500')">RENDIMIENTO (Km/gl)</label>

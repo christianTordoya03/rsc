@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import saveAs from 'file-saver';
 import * as ExcelJS from 'exceljs';
+import html2canvas from 'html2canvas'; // Importante para la captura de pantalla
 import { SupabaseService } from '../../core/services/supabase';
 import { ToastService } from '../../core/services/toast';
 
@@ -17,6 +18,7 @@ Chart.register(...registerables);
 })
 export class Dashboard implements OnInit {
   @ViewChild('rendimientoChart') rendimientoChartRef!: ElementRef;
+  @ViewChild('contenedorGrafico') contenedorGraficoRef!: ElementRef; // Añadido para capturar todo el contenedor
   chartInstance: Chart | null = null;
   isLoading = false;
 
@@ -75,8 +77,6 @@ export class Dashboard implements OnInit {
           clientes ( razon_social, direccion, distrito ),
           perfiles!despachos_operador_id_fkey ( nombre_completo )
         `)
-        // CAMBIO CRÍTICO: Antes solo traía COMPLETADO. Ahora trae todo lo que no esté anulado
-        // para que Gerencia vea la proyección real del mes y el avance.
         .neq('estado', 'ANULADO') 
         .order('fecha_despacho', { ascending: false });
 
@@ -110,7 +110,6 @@ export class Dashboard implements OnInit {
     this.kpiRetornadoKg = 0;
 
     this.despachosFiltrados.forEach(r => {
-      // CAMBIO CRÍTICO: Limpiamos las variables basura (pm15, vm15, mm15) y agregamos || 0 para evitar errores matemáticos (NaN)
       this.kpiProgramadoKg += ((r.p05||0)*5) + ((r.p10||0)*10) + ((r.p15||0)*15) + ((r.p45||0)*45);
       this.kpiVendidoKg += ((r.v05||0)*5) + ((r.v10||0)*10) + ((r.v15||0)*15) + ((r.v45||0)*45);
       this.kpiRetornadoKg += ((r.m05||0)*5) + ((r.m10||0)*10) + ((r.m15||0)*15) + ((r.m45||0)*45);
@@ -154,7 +153,6 @@ export class Dashboard implements OnInit {
     const fillVend: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } }; 
     const fillReto: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF8080' } }; 
 
-    // CAMBIO CRÍTICO: Arreglo de los anchos de columna en el Excel (Se superponían los datos)
     worksheet.mergeCells('A1:D1');
     worksheet.mergeCells('E1:I1'); worksheet.getCell('E1').value = 'PROGRAMADO'; worksheet.getCell('E1').fill = fillProg;
     worksheet.mergeCells('J1:N1'); worksheet.getCell('J1').value = 'VENDIDO'; worksheet.getCell('J1').fill = fillVend;
@@ -162,7 +160,6 @@ export class Dashboard implements OnInit {
     worksheet.getRow(1).alignment = { horizontal: 'center', vertical: 'middle' };
     worksheet.getRow(1).font = fontBold;
 
-    // Fila 2: Sub Cabeceras corregidas
     const headers = [
       'ITEM', 'Fecha', 'UNIDAD (Chofer)', 'PLACA CARGA',
       '05 KG', '10 KG', '15 KG', '45 KG', 'Programado (Kg)',
@@ -177,7 +174,6 @@ export class Dashboard implements OnInit {
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     });
 
-    // Llenado de Datos
     this.despachosFiltrados.forEach((r, idx) => {
       const kgProg = ((r.p05||0)*5) + ((r.p10||0)*10) + ((r.p15||0)*15) + ((r.p45||0)*45);
       const kgVend = ((r.v05||0)*5) + ((r.v10||0)*10) + ((r.v15||0)*15) + ((r.v45||0)*45);
@@ -194,16 +190,28 @@ export class Dashboard implements OnInit {
         r.clientes?.razon_social || 'Desconocido', r.observaciones || ''
       ]);
 
-      row.getCell(20).numFmt = '0.00%'; // % Retorno
-      row.getCell(21).numFmt = '0.00%'; // % Venta
+      row.getCell(20).numFmt = '0.00%'; 
+      row.getCell(21).numFmt = '0.00%'; 
       
       row.eachCell(c => { c.border = borderAll; c.alignment = { vertical: 'middle' }; });
     });
 
     worksheet.columns.forEach(col => { col.width = 12; });
-    worksheet.getColumn(3).width = 25; // Chofer
-    worksheet.getColumn(22).width = 30; // Cliente
-    worksheet.getColumn(23).width = 35; // Obs
+    worksheet.getColumn(3).width = 25; 
+    worksheet.getColumn(22).width = 30; 
+    worksheet.getColumn(23).width = 35; 
+
+    // Captura de imagen (html2canvas)
+    if (this.contenedorGraficoRef) {
+      try {
+        const canvas = await html2canvas(this.contenedorGraficoRef.nativeElement, { scale: 2, backgroundColor: '#ffffff' });
+        const graficaBase64 = canvas.toDataURL('image/png');
+        const imageId = workbook.addImage({ base64: graficaBase64, extension: 'png' });
+        worksheet.addImage(imageId, { tl: { col: 1, row: worksheet.rowCount + 2 }, ext: { width: 550, height: 350 } });
+      } catch (e) {
+        console.error('Error al capturar la gráfica', e);
+      }
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Consolidado_Gerencial_${new Date().getTime()}.xlsx`);

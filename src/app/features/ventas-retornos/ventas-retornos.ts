@@ -1,9 +1,10 @@
 import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import saveAs from 'file-saver';
 import * as ExcelJS from 'exceljs';
+import html2canvas from 'html2canvas';
 import { ToastService } from '../../core/services/toast';
 import { SupabaseService } from '../../core/services/supabase';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal';
@@ -13,11 +14,12 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-ventas-retornos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmModalComponent],
   templateUrl: './ventas-retornos.html'
 })
 export class VentasRetornos implements OnInit, AfterViewInit {
   @ViewChild('comparativaChart') comparativaChartRef!: ElementRef;
+  @ViewChild('contenedorGraficoVR') contenedorGraficoVRRef!: ElementRef;
   chartInstance: Chart | null = null;
 
   private fb = inject(FormBuilder);
@@ -36,6 +38,15 @@ export class VentasRetornos implements OnInit, AfterViewInit {
   kpiTotalVenta = 0;
   kpiTotalRetorno = 0;
 
+  // Filtros de fecha y búsqueda
+  fechaInicio = '';
+  fechaFin = '';
+  terminoBusqueda = '';
+
+  // Paginación ajustada a 15
+  paginaActual = 1;
+  itemsPorPagina = 15;
+
   ventasForm: FormGroup = this.fb.group({
     fecha: ['', Validators.required],
     placa: ['', Validators.required],
@@ -49,9 +60,14 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     observaciones: ['']
   });
 
-  registros: any[] = [];
+  registrosBase: any[] = []; 
+  registros: any[] = []; 
 
   async ngOnInit() {
+    const hoy = new Date();
+    this.fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+    this.fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+
     await this.cargarDespachos(); 
 
     this.ventasForm.valueChanges.subscribe(val => {
@@ -71,14 +87,13 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     this.isLoading = true;
     try {
       const { data, error } = await this.supabase.from('despachos')
-        // Extraemos distrito del cliente si existe
         .select(`*, clientes ( razon_social, distrito ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
-        .neq('estado', 'ANULADO') // Mostrar todo lo del día para que Logística sepa qué esperar
+        .neq('estado', 'ANULADO') 
         .order('fecha_despacho', { ascending: false });
 
       if (error) throw error;
 
-      this.registros = (data || []).map(d => ({
+      this.registrosBase = (data || []).map(d => ({
         id: d.id,
         fecha: d.fecha_despacho,
         placa: d.placa,
@@ -89,17 +104,53 @@ export class VentasRetornos implements OnInit, AfterViewInit {
         estado: d.estado || 'PENDIENTE',
         p05: d.p05 || 0, p10: d.p10 || 0, p15: d.p15 || 0, p45: d.p45 || 0,
         v05: d.v05 || 0, v10: d.v10 || 0, v15: d.v15 || 0, v45: d.v45 || 0,
-        // CORRECCIÓN CRÍTICA: La BD guarda en 'm' (merma), no en 'r' (retorno)
         m05: d.m05 || 0, m10: d.m10 || 0, m15: d.m15 || 0, m45: d.m45 || 0, 
         obs: d.observaciones || ''
       }));
 
-      this.calcularKPIs();
-      this.actualizarGrafico();
+      this.aplicarFiltros();
     } catch (error: any) {
       this.toast.showError('Error al cargar la base de datos');
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  onSearchChange() {
+    this.aplicarFiltros();
+  }
+
+  aplicarFiltros() {
+    let filtrados = this.registrosBase.filter(r => {
+      if (this.fechaInicio && r.fecha < this.fechaInicio) return false;
+      if (this.fechaFin && r.fecha > this.fechaFin) return false;
+      return true;
+    });
+
+    if (this.terminoBusqueda) {
+      const term = this.terminoBusqueda.toLowerCase();
+      filtrados = filtrados.filter(r => 
+        (r.placa && r.placa.toLowerCase().includes(term)) ||
+        (r.cliente && r.cliente.toLowerCase().includes(term)) ||
+        (r.conductor && r.conductor.toLowerCase().includes(term)) ||
+        (r.distrito && r.distrito.toLowerCase().includes(term))
+      );
+    }
+
+    this.registros = filtrados;
+    this.paginaActual = 1; 
+    this.calcularKPIs();
+    this.actualizarGrafico();
+  }
+
+  get totalPaginas() {
+    return Math.ceil(this.registros.length / this.itemsPorPagina) || 1;
+  }
+
+  cambiarPagina(delta: number) {
+    const nueva = this.paginaActual + delta;
+    if (nueva >= 1 && nueva <= this.totalPaginas) {
+      this.paginaActual = nueva;
     }
   }
 
@@ -164,7 +215,6 @@ export class VentasRetornos implements OnInit, AfterViewInit {
         fecha: registro.fecha, placa: registro.placa, conductor: registro.conductor, distribuidor: registro.cliente, distrito: registro.distrito, condicion: registro.condicion,
         prog_05: registro.p05, prog_10: registro.p10, prog_15: registro.p15, prog_45: registro.p45,
         venta_05: registro.v05, venta_10: registro.v10, venta_15: registro.v15, venta_45: registro.v45,
-        // Carga desde 'm' en lugar de 'r'
         ret_05: registro.m05, ret_10: registro.m10, ret_15: registro.m15, ret_45: registro.m45,
         observaciones: registro.obs
       }, { emitEvent: false });
@@ -222,11 +272,11 @@ export class VentasRetornos implements OnInit, AfterViewInit {
         distrito: v.distrito,
         p05: v.prog_05, p10: v.prog_10, p15: v.prog_15, p45: v.prog_45,
         v05: v.venta_05, v10: v.venta_10, v15: v.venta_15, v45: v.venta_45,
-        m05: v.ret_05, m10: v.ret_10, m15: v.ret_15, m45: v.ret_45, // Se envía a la BD como 'm'
-        venta_real: totalVendido, // Mantiene el Dashboard al día
-        merma: totalMerma, // Mantiene el Dashboard al día
+        m05: v.ret_05, m10: v.ret_10, m15: v.ret_15, m45: v.ret_45,
+        venta_real: totalVendido, 
+        merma: totalMerma, 
         observaciones: v.observaciones,
-        estado: 'COMPLETADO' // Almacén valida y cierra la ruta
+        estado: 'COMPLETADO' 
       };
 
       try {
@@ -259,16 +309,13 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     const worksheet = workbook.addWorksheet('Lista Maestra');
 
     const logoBase64 = await this.getBase64ImageFromUrl('/rsc.png');
-    const chartBase64 = this.chartInstance!.toBase64Image();
-
     const logoId = workbook.addImage({ base64: logoBase64, extension: 'png' });
-    const chartId = workbook.addImage({ base64: chartBase64, extension: 'png' });
 
     worksheet.addImage(logoId, { tl: { col: 0.5, row: 0.5 }, ext: { width: 140, height: 50 } });
 
     worksheet.mergeCells('D1:T2');
     const titleCell = worksheet.getCell('D1');
-    titleCell.value = 'LISTA MAESTRA DE GLP ENVASADO';
+    titleCell.value = `LISTA MAESTRA DE GLP ENVASADO (${this.fechaInicio} al ${this.fechaFin})`;
     titleCell.font = { bold: true, size: 16 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -279,7 +326,7 @@ export class VentasRetornos implements OnInit, AfterViewInit {
 
     worksheet.getCell('A5').value = 'RESPONSABLE:';
     worksheet.getCell('A5').font = { bold: true };
-    worksheet.getCell('C5').value = 'Usuario Actual (DNI Pendiente)';
+    worksheet.getCell('C5').value = 'Administrador de Almacén';
 
     const headerFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE6F2FF' } };
     const headerFont: Partial<ExcelJS.Font> = { name: 'Arial', bold: true, size: 10 };
@@ -299,16 +346,20 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     worksheet.columns = [{ width: 12 }, { width: 30 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 }, { width: 12 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 35 }];
 
     this.registros.forEach(reg => {
-      // Exportando reg.m05 en lugar de reg.r05
       const row = worksheet.addRow([reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, reg.p05, reg.p10, reg.p15, reg.p45, reg.v05, reg.v10, reg.v15, reg.v45, reg.m05, reg.m10, reg.m15, reg.m45, reg.obs]);
       row.eachCell(cell => { cell.border = borderStyle; cell.alignment = { vertical: 'middle' }; });
     });
 
-    const chartRowIndex = worksheet.rowCount + 2;
-    worksheet.addImage(chartId, {
-      tl: { col: 1, row: chartRowIndex },
-      ext: { width: 800, height: 350 }
-    });
+    if (this.contenedorGraficoVRRef) {
+      try {
+        const canvas = await html2canvas(this.contenedorGraficoVRRef.nativeElement, { scale: 2, backgroundColor: '#ffffff' });
+        const graficaBase64 = canvas.toDataURL('image/png');
+        const chartImgId = workbook.addImage({ base64: graficaBase64, extension: 'png' });
+        worksheet.addImage(chartImgId, { tl: { col: 1, row: worksheet.rowCount + 2 }, ext: { width: 600, height: 350 } });
+      } catch (e) {
+        console.error('Error al capturar la gráfica', e);
+      }
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `GO-F-007_Ventas_Retornos_${new Date().getTime()}.xlsx`);

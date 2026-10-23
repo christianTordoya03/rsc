@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import saveAs from 'file-saver';
 import * as ExcelJS from 'exceljs';
@@ -13,7 +13,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-combustible-peaje',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ConfirmModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmModalComponent],
   templateUrl: './combustible-peaje.html'
 })
 export class CombustiblePeaje implements OnInit, AfterViewInit {
@@ -33,6 +33,11 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
   
   userId = '';
   registros: any[] = []; 
+  registrosFiltrados: any[] = []; 
+  
+  // Novedad: Selector dinámico
+  placasUnicas: string[] = [];
+  filtroPlacaActiva = 'TODAS';
 
   // KPIs
   kpiOptimas = 0; kpiAlertas = 0; kpiGastoTotal = 0;
@@ -41,8 +46,8 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     fecha: ['', Validators.required],
     placa: ['', Validators.required],
     tipoRecorrido: ['Primera vuelta', Validators.required],
-    estacion: [''], // Opcional, el chofer no lo llena
-    conductor: [''], // Opcional, el chofer no lo llena
+    estacion: [''], 
+    conductor: [''], 
     odoInicial: [0, [Validators.required, Validators.min(0)]],
     odoFinal: [0, [Validators.required, Validators.min(0)]],
     galones: [0, [Validators.required, Validators.min(0.1)]],
@@ -75,8 +80,12 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
       if (error) throw error;
       this.registros = data || [];
-      this.calcularKPIs();
-      this.actualizarGrafico();
+      
+      // Extraer las placas únicas para el combo box
+      const placasArray = this.registros.map(r => r.placa).filter(Boolean);
+      this.placasUnicas = ['TODAS', ...Array.from(new Set(placasArray))];
+      
+      this.filtrarDatos();
     } catch (error: any) {
       this.toast.showError('Error al cargar tickets de combustible');
     } finally {
@@ -84,14 +93,25 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     }
   }
 
-  // Se actualizan las variables para que coincidan con la base de datos real
+  // --- FILTRO DINÁMICO ---
+  filtrarDatos() {
+    if (this.filtroPlacaActiva === 'TODAS') {
+      this.registrosFiltrados = [...this.registros];
+    } else {
+      this.registrosFiltrados = this.registros.filter(r => r.placa === this.filtroPlacaActiva);
+    }
+    
+    this.calcularKPIs();
+    this.actualizarGrafico();
+  }
+
   get kmRecorrido() { return Math.max(0, this.combustibleForm.value.odoFinal - this.combustibleForm.value.odoInicial); }
   get rendimiento() { return this.combustibleForm.value.galones > 0 ? (this.kmRecorrido / this.combustibleForm.value.galones) : 0; }
   get costoTotal() { return (this.combustibleForm.value.galones * this.combustibleForm.value.precioGalon) + (this.combustibleForm.value.gasto_peaje || 0); }
 
   calcularKPIs() {
     this.kpiOptimas = 0; this.kpiAlertas = 0; this.kpiGastoTotal = 0;
-    this.registros.forEach(r => {
+    this.registrosFiltrados.forEach(r => {
       const km = (r.km_final || 0) - (r.km_inicial || 0);
       const rend = (r.galones && r.galones > 0) ? km / r.galones : 0;
       if (rend >= 5) this.kpiOptimas++; else this.kpiAlertas++;
@@ -103,8 +123,10 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     if (!this.rendimientoChartRef) return;
     if (this.chartInstance) this.chartInstance.destroy();
 
-    const ordenados = [...this.registros].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-    const labels = ordenados.map(r => `${r.fecha} (${r.placa})`);
+    const ordenados = [...this.registrosFiltrados].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+    
+    // Si se filtró por placa, solo ponemos la fecha; si están todas, ponemos fecha + placa
+    const labels = ordenados.map(r => this.filtroPlacaActiva === 'TODAS' ? `${r.fecha} (${r.placa})` : r.fecha);
     const dataRendimiento = ordenados.map(r => ((r.km_final || 0) - (r.km_inicial || 0)) / (r.galones || 1));
 
     this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
@@ -133,7 +155,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
         recorrido: v.tipoRecorrido, 
         estacion: v.estacion,
         conductor: v.conductor, 
-        km_inicial: v.odoInicial,  // <-- Nombres correctos para la BD
+        km_inicial: v.odoInicial,  
         km_final: v.odoFinal, 
         galones: v.galones,
         costo_total: v.galones * v.precioGalon, 
@@ -192,7 +214,6 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     if (registro) {
       this.isEditing = true; this.currentEditId = registro.id;
       
-      // Calculamos el precio por galón a la inversa (Costo Total / Galones)
       const precioCalculado = (registro.galones && registro.galones > 0) 
         ? (registro.costo_total / registro.galones) 
         : 0;
@@ -238,7 +259,10 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
     worksheet.addImage(logoId, { tl: { col: 0.5, row: 0.5 }, ext: { width: 140, height: 50 } });
     worksheet.mergeCells('D1:K2'); const titleCell = worksheet.getCell('D1');
-    titleCell.value = 'CONTROL DE KILOMETRAJE Y PEAJES - SERVICIOS RSC DIESEL'; titleCell.font = { bold: true, size: 14 }; titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.value = this.filtroPlacaActiva === 'TODAS' 
+      ? 'CONTROL DE KILOMETRAJE Y PEAJES (GENERAL)' 
+      : `CONTROL DE KILOMETRAJE - UNIDAD ${this.filtroPlacaActiva}`;
+    titleCell.font = { bold: true, size: 14 }; titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
     const headerFont: Partial<ExcelJS.Font> = { bold: true, size: 10 };
     const border: Partial<ExcelJS.Borders> = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
@@ -247,7 +271,8 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     worksheet.getRow(7).eachCell((cell) => { cell.font = headerFont; cell.border = border; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } }; });
     worksheet.columns = [{ width: 6 }, { width: 12 }, { width: 10 }, { width: 25 }, { width: 20 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 10 }, { width: 15 }, { width: 14 }, { width: 12 }, { width: 30 }];
 
-    this.registros.forEach((reg, index) => {
+    // Exporta solo la tabla filtrada
+    this.registrosFiltrados.forEach((reg, index) => {
       const rec = (reg.km_final || 0) - (reg.km_inicial || 0);
       const rend = (reg.galones && reg.galones > 0) ? parseFloat((rec / reg.galones).toFixed(2)) : 0;
       const costo = parseFloat((reg.costo_total || 0).toFixed(2));
@@ -258,6 +283,8 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
     worksheet.addImage(chartId, { tl: { col: 1, row: worksheet.rowCount + 2 }, ext: { width: 800, height: 350 } });
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `GO-F-010_Combustible_Peaje_${new Date().getTime()}.xlsx`);
+    
+    const nombreArchivo = this.filtroPlacaActiva === 'TODAS' ? 'General' : this.filtroPlacaActiva;
+    saveAs(new Blob([buffer]), `GO-F-010_Combustible_${nombreArchivo}_${new Date().getTime()}.xlsx`);
   }
 }
