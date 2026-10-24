@@ -41,11 +41,11 @@ export class Clientes implements OnInit {
     this.clienteForm = this.fb.group({
       ruc: [''],
       razon_social: ['', Validators.required],
-      codigo_cliente: ['', Validators.required],
+      codigo_cliente: [''], // ¡AHORA ES TOTALMENTE OPCIONAL!
       direccion: [''],
       distrito: [''],
       zona: [''],
-      tipo_cliente: [''],
+      segmento: ['DISTRIBUIDORES', Validators.required],
       telefono: [''], 
       contacto: [''], 
       correo: ['', Validators.email], 
@@ -98,11 +98,10 @@ export class Clientes implements OnInit {
     }
   }
 
-  // ==== FILTRO BLINDADO POR PESTAÑA ====
   get clientesFiltrados() {
     let base = this.registros.filter(c => {
       if (this.modoVista === 'INDUSTRIAS') return c.tipo_cliente === 'B2B/INDUSTRIAS';
-      return c.tipo_cliente !== 'B2B/INDUSTRIAS'; // Distribuidores
+      return c.tipo_cliente !== 'B2B/INDUSTRIAS';
     });
 
     if (!this.terminoBusqueda) return base;
@@ -183,7 +182,6 @@ export class Clientes implements OnInit {
           const nombre = this.getCellValueText(row.getCell(cNom));  
 
           if (codigoBruto && nombre && nombre !== '0') {
-            // BLINDAJE: Aislamos los códigos B2B con un prefijo
             const codigo = this.modoVista === 'INDUSTRIAS' 
                            ? 'B2B-' + codigoBruto.replace('B2B-', '') 
                            : codigoBruto.replace('B2B-', '');
@@ -232,13 +230,19 @@ export class Clientes implements OnInit {
   }
 
   async onSubmit() {
-    if (this.clienteForm.invalid) return this.toast.showError('Complete la Razón Social y el Código');
+    if (this.clienteForm.invalid) return this.toast.showError('Complete la Razón Social y el Segmento');
     this.isLoading = true;
     const v = this.clienteForm.value;
     
-    // BLINDAJE EN FORMULARIO MANUAL
+    // ==== MAGIA: AUTOGENERADOR DE CÓDIGOS SI ESTÁ VACÍO ====
     let codFinal = v.codigo_cliente?.trim().toUpperCase() || null;
-    if (codFinal && this.modoVista === 'INDUSTRIAS') {
+    
+    if (!codFinal) {
+       // Si no puso código, usamos el RUC. Si tampoco hay RUC, creamos uno único.
+       codFinal = v.ruc?.trim() ? v.ruc.trim() : 'GEN-' + Math.floor(Math.random() * 1000000);
+    }
+
+    if (codFinal && v.segmento === 'B2B/INDUSTRIAS' && !codFinal.startsWith('B2B-')) {
        codFinal = 'B2B-' + codFinal.replace('B2B-', '');
     }
 
@@ -249,7 +253,7 @@ export class Clientes implements OnInit {
       direccion: v.direccion?.trim().toUpperCase() || null,
       distrito: v.distrito?.trim().toUpperCase() || null,
       zona: v.zona?.trim().toUpperCase() || null,
-      tipo_cliente: this.modoVista === 'INDUSTRIAS' ? 'B2B/INDUSTRIAS' : 'DISTRIBUIDORES',
+      tipo_cliente: v.segmento,
       telefono: v.telefono?.trim() || null,
       contacto: v.contacto?.trim().toUpperCase() || null,
       correo: v.correo?.trim() || null,
@@ -295,7 +299,6 @@ export class Clientes implements OnInit {
     }
   }
 
-  // ==== BORRADO MASIVO BLINDADO POR PESTAÑA ====
   async executeDeleteAll() {
     this.isLoading = true;
     try {
@@ -336,7 +339,6 @@ export class Clientes implements OnInit {
     if (registro) {
       this.isEditing = true; this.currentEditId = registro.id;
       
-      // Ocultamos el prefijo visualmente para no confundir al usuario
       let codVisual = registro.codigo_cliente;
       if (this.modoVista === 'INDUSTRIAS' && codVisual?.startsWith('B2B-')) {
          codVisual = codVisual.replace('B2B-', '');
@@ -344,11 +346,15 @@ export class Clientes implements OnInit {
 
       this.clienteForm.patchValue({
         ...registro,
+        segmento: registro.tipo_cliente || 'DISTRIBUIDORES',
         codigo_cliente: codVisual
       });
     } else {
       this.isEditing = false; this.currentEditId = null;
-      this.clienteForm.reset({ estado: true });
+      this.clienteForm.reset({ 
+        estado: true,
+        segmento: this.modoVista === 'INDUSTRIAS' ? 'B2B/INDUSTRIAS' : 'DISTRIBUIDORES'
+      });
     }
     this.showForm = true;
   }

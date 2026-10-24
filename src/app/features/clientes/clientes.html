@@ -6,7 +6,6 @@
       <p class="text-sm text-slate-500">Gestión de base de datos Retail e Industrias (B2B)</p>
     </div>
     
-    <!-- SWITCH DINÁMICO DE VISTA -->
     <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto">
       <button 
         (click)="cambiarModoVista('DISTRIBUIDORES')"
@@ -33,7 +32,7 @@
           class="flex-1 sm:flex-none text-white px-4 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
           [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-          Sincronizar {{ modoVista === 'DISTRIBUIDORES' ? 'Distribuidores' : 'Industrias' }}
+          Sincronizar {{ modoVista === 'DISTRIBUIDORES' ? 'Retail' : 'B2B' }}
         </button>
       </ng-container>
 
@@ -44,22 +43,15 @@
     </div>
   </div>
 
-  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-0 shrink-0">
-    <div class="w-full sm:w-96 relative">
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 shrink-0 relative z-0">
+    <div class="relative">
       <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <input type="text" [(ngModel)]="terminoBusqueda" (ngModelChange)="onSearchChange()" placeholder="Buscar por Nombre, RUC o Código..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all uppercase">
-    </div>
-    <div class="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full animate-pulse" [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-500' : 'bg-teal-500'"></span>
-      Registros en {{ modoVista }}: <span class="text-[#4F46E5]">{{ clientesFiltrados.length }}</span>
+      <input type="text" [(ngModel)]="terminoBusqueda" (ngModelChange)="onSearchChange()" placeholder="Buscar por Razón Social, RUC o Código SAP..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all uppercase">
     </div>
   </div>
 
   <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
-    <div class="flex flex-col items-center gap-3">
-      <div class="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
-      <p class="font-bold text-indigo-900 animate-pulse">Procesando Base de Datos...</p>
-    </div>
+    <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
   </div>
 
   <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col flex-1 relative z-0">
@@ -75,8 +67,8 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-sm">
-          <tr *ngIf="clientesFiltrados.length === 0 && !isLoading">
-            <td colspan="5" class="p-10 text-center text-slate-400 font-medium">No se encontraron clientes de {{ modoVista }}. Ajuste la búsqueda o sincronice el Excel.</td>
+          <tr *ngIf="clientesFiltrados.length === 0">
+            <td colspan="5" class="p-10 text-center text-slate-400 font-medium">No se encontraron clientes en la base de datos.</td>
           </tr>
           
           <tr *ngFor="let reg of clientesFiltrados | slice: (paginaActual-1)*itemsPorPagina : paginaActual*itemsPorPagina" class="hover:bg-slate-50 transition-colors" [class.opacity-50]="!reg.estado">
@@ -88,7 +80,6 @@
               <div class="flex flex-col items-center gap-1 text-xs">
                 <span *ngIf="reg.ruc" class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 font-medium">RUC: {{ reg.ruc }}</span>
                 <span *ngIf="reg.codigo_cliente" class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200 font-bold">SAP: {{ reg.codigo_cliente }}</span>
-                <span *ngIf="!reg.ruc && !reg.codigo_cliente" class="text-slate-400 italic">S/N</span>
               </div>
             </td>
             <td class="p-4">
@@ -113,7 +104,7 @@
         </tbody>
       </table>
     </div>
-
+    
     <div *ngIf="clientesFiltrados.length > 0" class="bg-slate-50 border-t border-slate-200 p-4 flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
       <div class="text-xs text-slate-500 font-medium">
         Mostrando {{ (paginaActual - 1) * itemsPorPagina + 1 }} - 
@@ -121,10 +112,8 @@
         <span *ngIf="paginaActual * itemsPorPagina >= clientesFiltrados.length">{{ clientesFiltrados.length }}</span>
         de {{ clientesFiltrados.length }}
       </div>
-      
       <div class="flex items-center gap-2">
         <button (click)="cambiarPagina(-1)" [disabled]="paginaActual === 1" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-bold flex items-center gap-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
           Anterior
         </button>
         <span class="text-xs font-bold text-[#4F46E5] bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
@@ -132,7 +121,6 @@
         </span>
         <button (click)="cambiarPagina(1)" [disabled]="paginaActual === totalPaginas || totalPaginas === 0" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs font-bold flex items-center gap-1">
           Siguiente
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
       </div>
     </div>
@@ -142,15 +130,26 @@
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
-      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'EDITAR CLIENTE' : 'NUEVO CLIENTE (' + modoVista + ')' }}</h2>
+      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'EDITAR CLIENTE' : 'NUEVO CLIENTE / DISTRIBUIDOR' }}</h2>
       <button (click)="closeForm()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
 
     <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" [formGroup]="clienteForm">
+      
+      <!-- NUEVO: SELECTOR EXPLICITO DE SEGMENTO -->
+      <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-5 shadow-sm">
+        <label class="block text-xs font-black text-[#4F46E5] mb-2 uppercase tracking-widest">¿A qué lista pertenece este cliente?</label>
+        <select formControlName="segmento" class="w-full rounded-lg border-indigo-300 text-sm focus:ring-[#4F46E5] font-bold text-slate-700 bg-white py-2.5">
+          <option value="DISTRIBUIDORES">DISTRIBUIDORES (Retail)</option>
+          <option value="B2B/INDUSTRIAS">INDUSTRIAS (B2B)</option>
+        </select>
+        <p class="text-[10px] text-indigo-500 mt-1 font-medium">Esta selección determina en qué pestaña y reportes aparecerá la empresa.</p>
+      </div>
+
       <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">CÓDIGO DESTINATARIO (Único)</label>
-          <input type="text" formControlName="codigo_cliente" placeholder="Obligatorio" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono">
+          <label class="block text-xs font-bold text-slate-500 mb-1">CÓDIGO SAP (Único)</label>
+          <input type="text" formControlName="codigo_cliente" placeholder="opcional" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono">
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">RUC (Opcional)</label>
@@ -176,10 +175,6 @@
 
       <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">TIPO CLIENTE (Ej. GRANJA)</label>
-          <input type="text" formControlName="tipo_cliente" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] uppercase">
-        </div>
-        <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">TELÉFONO / CELULAR</label>
           <input type="text" formControlName="telefono" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
@@ -191,7 +186,7 @@
           <label class="block text-xs font-bold text-slate-500 mb-1">CORREO ELECTRÓNICO</label>
           <input type="email" formControlName="correo" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
         </div>
-        <div class="md:col-span-2 flex items-center gap-2 mt-2">
+        <div class="flex items-center gap-2 mt-2">
           <input type="checkbox" formControlName="estado" class="rounded text-[#4F46E5] focus:ring-[#4F46E5] w-5 h-5 cursor-pointer">
           <label class="text-sm font-bold text-slate-700 cursor-pointer">Cliente Activo en el Sistema</label>
         </div>
@@ -220,8 +215,8 @@
 <app-confirm-modal 
   [isOpen]="showDeleteAllConfirm" 
   title="⚠️ PELIGRO: VACIAR DIRECTORIO" 
-  message="¿Estás completamente seguro de eliminar TODOS los clientes? Esta acción es irreversible y dejará la base de datos en blanco." 
-  confirmText="Sí, vaciar base de datos" 
+  message="¿Estás completamente seguro de eliminar TODOS los clientes de esta vista? Esta acción es irreversible." 
+  confirmText="Sí, vaciar lista" 
   (confirm)="executeDeleteAll()" 
   (cancel)="cancelDeleteAll()">
 </app-confirm-modal>
