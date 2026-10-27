@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -11,7 +11,7 @@ import { ToastService } from '../../core/services/toast';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './operador.html'
 })
-export class OperadorComponent implements OnInit {
+export class OperadorComponent implements OnInit, OnDestroy {
   // Estados de Modales
   showModalCheckin = false; 
   showModalCheckout = false;
@@ -33,6 +33,9 @@ export class OperadorComponent implements OnInit {
   checkinForm: FormGroup;
   checkoutForm: FormGroup;
   despachoForm: FormGroup;
+
+  // Motor de actualización en tiempo real
+  private autoRefreshSub: any;
 
   constructor(
     private fb: FormBuilder,
@@ -68,9 +71,35 @@ export class OperadorComponent implements OnInit {
     if (session) {
       this.userId = session.user.id;
       this.verificarJornada();
+      this.iniciarSincronizacionSilenciosa();
     } else {
       this.router.navigate(['/login']);
     }
+  }
+
+  ngOnDestroy() {
+    if (this.autoRefreshSub) {
+      clearInterval(this.autoRefreshSub);
+    }
+  }
+
+  // ==== SINCRONIZADOR EN SEGUNDO PLANO ====
+  iniciarSincronizacionSilenciosa() {
+    this.autoRefreshSub = setInterval(async () => {
+      // Solo busca actualizaciones si el chofer está en turno y no está guardando algo
+      if (!this.isLoading && this.jornadaActiva) {
+        try {
+          await this.cargarRutasReales();
+        } catch (err) {
+           // Fallo silencioso (ignora errores de red pasajeros)
+        }
+      }
+    }, 10000); // 10 segundos
+  }
+
+  // ==== ANTI-PARPADEO ====
+  trackById(index: number, item: any): string {
+    return item.id;
   }
 
   async cerrarSesion() {
@@ -175,7 +204,21 @@ export class OperadorComponent implements OnInit {
       .order('creado_en', { ascending: true });
 
     if (error) throw error;
-    this.rutasAsignadas = data || [];
+    
+    // 1. Aplicamos el ordenador
+    this.rutasAsignadas = this.ordenarRutasPrioritarias(data || []);
+
+    // 2. MAGIA DE SINCRONIZACIÓN: Actualizamos el modal del operador en vivo
+    if (this.rutaActual) {
+      const rutaActualizada = this.rutasAsignadas.find(r => r.id === this.rutaActual.id);
+      if (rutaActualizada) {
+        this.rutaActual = rutaActualizada; // Refresca los números si logística editó
+      } else {
+        // Si logística anuló o completó la ruta, se le cierra el modal automáticamente
+        this.showDespachoModal = false; 
+        this.rutaActual = null;
+      }
+    }
   }
 
   // --- SEMÁFORO LÓGICA (Corregido a las variables puras p15 y v15) ---
@@ -296,5 +339,26 @@ export class OperadorComponent implements OnInit {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  ordenarRutasPrioritarias(rutasArray: any[]) {
+    return rutasArray.sort((a, b) => {
+      // 1. Si la ruta ya está 100% COMPLETADA, la mandamos al fondo del todo
+      if (a.estado === 'COMPLETADO' && b.estado !== 'COMPLETADO') return 1;
+      if (b.estado === 'COMPLETADO' && a.estado !== 'COMPLETADO') return -1;
+
+      // 2. Calculamos si la ruta ya tiene algún avance (cilindros o mermas)
+      const avanceA = (a.v05||0) + (a.v10||0) + (a.v15||0) + (a.v45||0) + (a.m05||0) + (a.m10||0) + (a.m15||0) + (a.m45||0);
+      const avanceB = (b.v05||0) + (b.v10||0) + (b.v15||0) + (b.v45||0) + (b.m05||0) + (b.m10||0) + (b.m15||0) + (b.m45||0);
+
+      // 3. Regla de Oro: Los que tienen avance > 0 suben a la cima automáticamente
+      if (avanceA > 0 && avanceB === 0) return -1;
+      if (avanceB > 0 && avanceA === 0) return 1;
+
+      // 4. Si están empatados (ambos en 0 o ambos empezados), ordenamos alfabéticamente por cliente
+      const clienteA = a.clientes?.razon_social || '';
+      const clienteB = b.clientes?.razon_social || '';
+      return clienteA.localeCompare(clienteB);
+    });
   }
 }

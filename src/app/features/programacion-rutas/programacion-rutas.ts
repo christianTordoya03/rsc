@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import * as ExcelJS from 'exceljs';
@@ -13,7 +13,8 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
   providers: [DatePipe], 
   templateUrl: './programacion-rutas.html'
 })
-export class ProgramacionRutasComponent implements OnInit {
+export class ProgramacionRutasComponent implements OnInit, OnDestroy {
+  private autoRefreshSub: any;
   @ViewChild('fileInput') fileInput!: ElementRef;
 
   modoVista: 'DISTRIBUIDORES' | 'INDUSTRIAS' = 'DISTRIBUIDORES';
@@ -46,6 +47,17 @@ export class ProgramacionRutasComponent implements OnInit {
   showDetalleModal = false;
   rutaDetalleActual: any = null;
   historialEntregas: any[] = [];
+  editingEntregaId: string | null = null;
+  entregaEditForm: any = {};
+
+  confirmDialog = {
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: '',
+    actionType: '',
+    payload: null as any
+  };
 
   userName = ''; 
   userRole = ''; 
@@ -79,6 +91,50 @@ export class ProgramacionRutasComponent implements OnInit {
     }
     await this.cargarDatosBase();
     await this.cargarRutasDelDia();
+    this.iniciarSincronizacionSilenciosa();
+  }
+
+  abrirConfirmacion(title: string, message: string, confirmText: string, actionType: string, payload: any) {
+    this.confirmDialog = { isOpen: true, title, message, confirmText, actionType, payload };
+  }
+
+  cerrarConfirmacion() {
+    this.confirmDialog.isOpen = false;
+  }
+
+  ejecutarAccionConfirmada() {
+    const { actionType, payload } = this.confirmDialog;
+    this.cerrarConfirmacion();
+    
+    if (actionType === 'ELIMINAR_REPORTE') this.eliminarEntregaParcial(payload);
+    else if (actionType === 'EDITAR_REPORTE') this.guardarEdicionEntrega(payload);
+    else if (actionType === 'ANULAR_RUTA') this.anularRuta(payload);
+  }
+
+  ngOnDestroy() {
+    if (this.autoRefreshSub) {
+      clearInterval(this.autoRefreshSub);
+    }
+  }
+
+  iniciarSincronizacionSilenciosa() {
+    this.autoRefreshSub = setInterval(async () => {
+      if (!this.isLoading) { 
+        try {
+          const { data, error } = await this.supabase.despachos
+            .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
+            .order('creado_en', { ascending: false });
+
+          if (!error && data) {
+            this.rutas = data; 
+          }
+        } catch (err) {} 
+      }
+    }, 10000); 
+  }
+
+  trackById(index: number, item: any): string {
+    return item.id;
   }
 
   cambiarModoVista(modo: 'DISTRIBUIDORES' | 'INDUSTRIAS') {
@@ -159,11 +215,27 @@ export class ProgramacionRutasComponent implements OnInit {
   }
 
   get rutasPendientes() { 
-    return this.rutas.filter(r => {
+    // 1. Primero filtramos las rutas según la pestaña y la barra de búsqueda
+    const filtradas = this.rutas.filter(r => {
       const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
       const coincideModo = this.modoVista === origen;
       return coincideModo && (r.estado === 'PENDIENTE' || r.estado === 'EN_RUTA' || r.estado === 'EN_PROCESO') && this.cumpleFiltros(r);
     }); 
+
+    // 2. Luego aplicamos el Ordenador Inteligente (Igual que el operador)
+    return filtradas.sort((a, b) => {
+      const avanceA = (a.v05||0) + (a.v10||0) + (a.v15||0) + (a.v45||0) + (a.m05||0) + (a.m10||0) + (a.m15||0) + (a.m45||0);
+      const avanceB = (b.v05||0) + (b.v10||0) + (b.v15||0) + (b.v45||0) + (b.m05||0) + (b.m10||0) + (b.m15||0) + (b.m45||0);
+
+      // Los que tienen avance > 0 suben a la cima automáticamente
+      if (avanceA > 0 && avanceB === 0) return -1;
+      if (avanceB > 0 && avanceA === 0) return 1;
+
+      // Si están empatados, se ordenan alfabéticamente
+      const clienteA = a.clientes?.razon_social || '';
+      const clienteB = b.clientes?.razon_social || '';
+      return clienteA.localeCompare(clienteB);
+    });
   }
 
   get rutasHistorial() { 
@@ -269,7 +341,6 @@ export class ProgramacionRutasComponent implements OnInit {
       const worksheet = workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
       const sheetInicial = workbook.getWorksheet('PROGRAMACION INICIAL'); 
 
-      // MEJORA TÉCNICA 1: Tolerancia absoluta a números provenientes de Supabase
       const normalize = (str: any) => {
           if (str === null || str === undefined) return '';
           return String(str).trim().toUpperCase().replace(/\s+/g, ' ');
@@ -291,7 +362,7 @@ export class ProgramacionRutasComponent implements OnInit {
           mapCleanNombres.set(stripPunct(norm), c.id);
         }
         if (c.ruc) mapRucs.set(normalize(c.ruc), c.id);
-        if (c.codigo_cliente) mapCodigos.set(normalize(c.codigo_cliente), c.id); // Ahora soporta códigos en formato Number
+        if (c.codigo_cliente) mapCodigos.set(normalize(c.codigo_cliente), c.id); 
       });
 
       const mapPedidoADistribuidor = new Map<string, string>();
@@ -307,8 +378,8 @@ export class ProgramacionRutasComponent implements OnInit {
             if (!val || val === '0') continue;
             const valClean = val.replace(/\s/g, '');
 
-            if (/^4[45]\d{5}/.test(valClean)) pedido = valClean; // Pedidos
-            else if (/^\d{5,10}$/.test(valClean)) codSap = valClean; // Códigos SAP de cualquier tamaño
+            if (/^4[45]\d{5}/.test(valClean)) pedido = valClean; 
+            else if (/^\d{5,10}$/.test(valClean)) codSap = valClean; 
             else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION', 'NOMBRE', 'NOMBRE DE CLIENTE'].includes(val)) {
               if (!nombre) nombre = val; 
             }
@@ -318,7 +389,6 @@ export class ProgramacionRutasComponent implements OnInit {
         });
       }
 
-      // ==== RADAR EXTREMO ====
       const findClienteId = (texto: string) => {
         if (!texto) return null;
         const t = normalize(texto);
@@ -329,7 +399,6 @@ export class ProgramacionRutasComponent implements OnInit {
         if (mapRucs.has(t)) return mapRucs.get(t);
         if (mapNombres.has(t)) return mapNombres.get(t);
 
-        // MEJORA TÉCNICA 2: Acepta cualquier código numérico de entre 5 y 10 dígitos
         const matchNum = t.match(/\b\d{5,10}\b/);
         if (matchNum) {
           const cod = matchNum[0];
@@ -352,7 +421,6 @@ export class ProgramacionRutasComponent implements OnInit {
            if (tClean.length > 4 && nameCleanDB.length > 4 && (nameCleanDB.includes(tClean) || tClean.includes(nameCleanDB))) return id;
         }
 
-        // MEJORA TÉCNICA 3: Fallback de seguridad por escaneo directo en matriz
         const matchFallback = this.clientesActivos.find(c => {
             const cCod = stripPunct(c.codigo_cliente);
             const cRuc = stripPunct(c.ruc);
@@ -463,7 +531,6 @@ export class ProgramacionRutasComponent implements OnInit {
         nuevasRutas.push(...Array.from(rutasAgrupadas.values()));
 
       } else {
-        // ==== MODO DISTRIBUIDORES ====
         let colPlaca = 0, colTransportes = 0, colPedido = 0, colEntrega = 0, colDistribuidor = 0; 
         let colLimite = 999; 
         const cols05: number[] = [], cols10: number[] = [], cols15: number[] = [], cols45: number[] = [];
@@ -672,7 +739,6 @@ export class ProgramacionRutasComponent implements OnInit {
   }
 
   async anularRuta(id: string) {
-    if (!confirm('¿Está seguro de anular esta ruta?')) return;
     try {
       const { error } = await this.supabase.despachos.update({ estado: 'ANULADO' }).eq('id', id);
       if (error) throw error;
@@ -774,5 +840,120 @@ export class ProgramacionRutasComponent implements OnInit {
   cerrarEvidencia() {
     this.showFotoModal = false;
     this.fotoUrlActual = '';
+  }
+
+  async eliminarEntregaParcial(entrega: any) {
+
+    this.isLoading = true;
+    try {
+      const { error: errDelete } = await this.supabase.from('entregas_parciales').delete().eq('id', entrega.id);
+      if (errDelete) throw errDelete;
+
+      const { data: restantes, error: errFetch } = await this.supabase.from('entregas_parciales').select('*').eq('despacho_id', this.rutaDetalleActual.id);
+      if (errFetch) throw errFetch;
+
+      let tv05 = 0, tv10 = 0, tv15 = 0, tv45 = 0;
+      let tm05 = 0, tm10 = 0, tm15 = 0, tm45 = 0;
+
+      (restantes || []).forEach(e => {
+        tv05 += (e.v05 || 0); tv10 += (e.v10 || 0); tv15 += (e.v15 || 0); tv45 += (e.v45 || 0);
+        tm05 += (e.m05 || 0); tm10 += (e.m10 || 0); tm15 += (e.m15 || 0); tm45 += (e.m45 || 0);
+      });
+
+      const totalEntregado = tv05 + tv10 + tv15 + tv45;
+      const totalProgramado = (this.rutaDetalleActual.p05 || 0) + (this.rutaDetalleActual.p10 || 0) + (this.rutaDetalleActual.p15 || 0) + (this.rutaDetalleActual.p45 || 0);
+      
+      let nuevoEstado = 'PENDIENTE';
+      if (totalEntregado > 0) {
+        nuevoEstado = totalEntregado >= totalProgramado ? 'COMPLETADO' : 'EN_PROCESO';
+      }
+
+      const payloadUpdate = {
+        v05: tv05, v10: tv10, v15: tv15, v45: tv45,
+        m05: tm05, m10: tm10, m15: tm15, m45: tm45,
+        estado: nuevoEstado
+      };
+
+      const { data: updatedRuta, error: errUpdate } = await this.supabase.despachos.update(payloadUpdate)
+        .eq('id', this.rutaDetalleActual.id)
+        .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
+      if (errUpdate) throw errUpdate;
+
+      this.historialEntregas = restantes || [];
+      this.rutaDetalleActual = updatedRuta;
+      
+      const idx = this.rutas.findIndex(r => r.id === this.rutaDetalleActual.id);
+      if (idx !== -1) this.rutas[idx] = updatedRuta;
+
+      this.toast.showSuccess('Reporte anulado y ruta recalculada.');
+    } catch (error: any) {
+      this.toast.showError('Error al anular entrega: ' + error.message);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  iniciarEdicionEntrega(entrega: any) {
+    this.editingEntregaId = entrega.id;
+    this.entregaEditForm = {
+      v05: entrega.v05 || 0, v10: entrega.v10 || 0, v15: entrega.v15 || 0, v45: entrega.v45 || 0,
+      m05: entrega.m05 || 0, m10: entrega.m10 || 0, m15: entrega.m15 || 0, m45: entrega.m45 || 0,
+      observaciones: entrega.observaciones || ''
+    };
+  }
+
+  cancelarEdicionEntrega() {
+    this.editingEntregaId = null;
+  }
+
+  async guardarEdicionEntrega(entregaId: string) {
+    this.isLoading = true;
+    try {
+      const { error: errUpdate } = await this.supabase.from('entregas_parciales').update({ ...this.entregaEditForm }).eq('id', entregaId);
+      if (errUpdate) throw errUpdate;
+
+      const { data: restantes, error: errFetch } = await this.supabase.from('entregas_parciales').select('*').eq('despacho_id', this.rutaDetalleActual.id);
+      if (errFetch) throw errFetch;
+
+      let tv05 = 0, tv10 = 0, tv15 = 0, tv45 = 0;
+      let tm05 = 0, tm10 = 0, tm15 = 0, tm45 = 0;
+
+      (restantes || []).forEach(e => {
+        tv05 += (e.v05 || 0); tv10 += (e.v10 || 0); tv15 += (e.v15 || 0); tv45 += (e.v45 || 0);
+        tm05 += (e.m05 || 0); tm10 += (e.m10 || 0); tm15 += (e.m15 || 0); tm45 += (e.m45 || 0);
+      });
+
+      const totalEntregado = tv05 + tv10 + tv15 + tv45;
+      const totalProgramado = (this.rutaDetalleActual.p05 || 0) + (this.rutaDetalleActual.p10 || 0) + (this.rutaDetalleActual.p15 || 0) + (this.rutaDetalleActual.p45 || 0);
+      
+      let nuevoEstado = 'PENDIENTE';
+      if (totalEntregado > 0) {
+        nuevoEstado = totalEntregado >= totalProgramado ? 'COMPLETADO' : 'EN_PROCESO';
+      }
+
+      const payloadUpdate = {
+        v05: tv05, v10: tv10, v15: tv15, v45: tv45,
+        m05: tm05, m10: tm10, m15: tm15, m45: tm45,
+        estado: nuevoEstado
+      };
+
+      const { data: updatedRuta, error: errUpdateDespacho } = await this.supabase.despachos.update(payloadUpdate)
+        .eq('id', this.rutaDetalleActual.id)
+        .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`).single();
+      if (errUpdateDespacho) throw errUpdateDespacho;
+
+      this.historialEntregas = restantes || [];
+      this.rutaDetalleActual = updatedRuta;
+      
+      const idx = this.rutas.findIndex(r => r.id === this.rutaDetalleActual.id);
+      if (idx !== -1) this.rutas[idx] = updatedRuta;
+
+      this.editingEntregaId = null;
+      this.toast.showSuccess('Reporte editado y ruta recalculada con éxito.');
+    } catch (error: any) {
+      this.toast.showError('Error al editar entrega: ' + error.message);
+    } finally {
+      this.isLoading = false;
+    }
   }
 }

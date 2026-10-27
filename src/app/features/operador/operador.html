@@ -37,8 +37,8 @@
       <p>No tienes rutas pendientes para esta placa.</p>
     </div>
 
-    <!-- TARJETAS CON SEMÁFORO -->
-    <div *ngFor="let ruta of rutasAsignadas" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+    <!-- TARJETAS CON SEMÁFORO Y TRACKBY APLICADO -->
+    <div *ngFor="let ruta of rutasAsignadas; trackBy: trackById" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
       <div class="absolute top-0 left-0 bottom-0 w-3" [ngClass]="getEstadoSemaforo(ruta).color"></div>
       
       <div class="p-4 pl-6">
@@ -49,6 +49,10 @@
               {{ getEstadoSemaforo(ruta).texto }}
             </span>
             <h3 class="font-bold text-slate-800 text-lg mt-1 leading-tight">{{ ruta.clientes?.razon_social || ruta.cliente_id }}</h3>
+            <!-- OBSERVACIÓN LOGÍSTICA DESTACADA (Ej. CAMBIO / RECOJO) -->
+            <p *ngIf="ruta.observacion" class="text-xs font-bold text-red-600 bg-red-50 inline-block px-2 py-1 rounded mt-1 border border-red-100">
+              {{ ruta.observacion }}
+            </p>
             <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path></svg>
               {{ ruta.clientes?.direccion || 'Sin dirección' }}
