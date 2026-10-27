@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
@@ -17,10 +17,11 @@ Chart.register(...registerables);
   imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmModalComponent],
   templateUrl: './ventas-retornos.html'
 })
-export class VentasRetornos implements OnInit, AfterViewInit {
+export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('comparativaChart') comparativaChartRef!: ElementRef;
   @ViewChild('contenedorGraficoVR') contenedorGraficoVRRef!: ElementRef;
   chartInstance: Chart | null = null;
+  private autoRefreshSub: any;
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
@@ -38,12 +39,10 @@ export class VentasRetornos implements OnInit, AfterViewInit {
   kpiTotalVenta = 0;
   kpiTotalRetorno = 0;
 
-  // Filtros de fecha y búsqueda
   fechaInicio = '';
   fechaFin = '';
   terminoBusqueda = '';
 
-  // Paginación ajustada a 15
   paginaActual = 1;
   itemsPorPagina = 15;
 
@@ -69,6 +68,7 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     this.fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
 
     await this.cargarDespachos(); 
+    this.iniciarSincronizacionSilenciosa();
 
     this.ventasForm.valueChanges.subscribe(val => {
       if (!this.isEditing && this.showForm) {
@@ -83,8 +83,28 @@ export class VentasRetornos implements OnInit, AfterViewInit {
     }, 100);
   }
 
-  async cargarDespachos() {
-    this.isLoading = true;
+  ngOnDestroy() {
+    if (this.autoRefreshSub) {
+      clearInterval(this.autoRefreshSub);
+    }
+  }
+
+  iniciarSincronizacionSilenciosa() {
+    this.autoRefreshSub = setInterval(async () => {
+      if (!this.isLoading && !this.showForm) {
+        try {
+          await this.cargarDespachos(true); 
+        } catch (err) {}
+      }
+    }, 10000); 
+  }
+
+  trackById(index: number, item: any): string {
+    return item.id;
+  }
+
+  async cargarDespachos(isSilent = false) {
+    if (!isSilent) this.isLoading = true;
     try {
       const { data, error } = await this.supabase.from('despachos')
         .select(`*, clientes ( razon_social, distrito ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
@@ -110,9 +130,9 @@ export class VentasRetornos implements OnInit, AfterViewInit {
 
       this.aplicarFiltros();
     } catch (error: any) {
-      this.toast.showError('Error al cargar la base de datos');
+      if (!isSilent) this.toast.showError('Error al cargar la base de datos');
     } finally {
-      this.isLoading = false;
+      if (!isSilent) this.isLoading = false;
     }
   }
 
@@ -162,7 +182,6 @@ export class VentasRetornos implements OnInit, AfterViewInit {
 
   actualizarGrafico() {
     if (!this.comparativaChartRef) return;
-    if (this.chartInstance) this.chartInstance.destroy();
 
     const sumVentas = [
       this.registros.reduce((acc, r) => acc + r.v05, 0),
@@ -178,17 +197,23 @@ export class VentasRetornos implements OnInit, AfterViewInit {
       this.registros.reduce((acc, r) => acc + r.m45, 0)
     ];
 
-    this.chartInstance = new Chart(this.comparativaChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['05 KG', '10 KG', '15 KG', '45 KG'],
-        datasets: [
-          { label: 'Ventas Reales', data: sumVentas, backgroundColor: '#4F46E5', borderRadius: 4 },
-          { label: 'Retornos / Mermas', data: sumRetornos, backgroundColor: '#EF4444', borderRadius: 4 }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
+    if (this.chartInstance) {
+      this.chartInstance.data.datasets[0].data = sumVentas;
+      this.chartInstance.data.datasets[1].data = sumRetornos;
+      this.chartInstance.update();
+    } else {
+      this.chartInstance = new Chart(this.comparativaChartRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: ['05 KG', '10 KG', '15 KG', '45 KG'],
+          datasets: [
+            { label: 'Ventas Reales', data: sumVentas, backgroundColor: '#4F46E5', borderRadius: 4 },
+            { label: 'Retornos / Mermas', data: sumRetornos, backgroundColor: '#EF4444', borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
   }
 
   checkDraft() {

@@ -1,10 +1,10 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
 import saveAs from 'file-saver';
 import * as ExcelJS from 'exceljs';
-import html2canvas from 'html2canvas'; // Importante para la captura de pantalla
+import html2canvas from 'html2canvas'; 
 import { SupabaseService } from '../../core/services/supabase';
 import { ToastService } from '../../core/services/toast';
 
@@ -16,9 +16,10 @@ Chart.register(...registerables);
   imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.html'
 })
-export class Dashboard implements OnInit {
+export class Dashboard implements OnInit, OnDestroy {
+  private autoRefreshSub: any;
   @ViewChild('rendimientoChart') rendimientoChartRef!: ElementRef;
-  @ViewChild('contenedorGrafico') contenedorGraficoRef!: ElementRef; // Añadido para capturar todo el contenedor
+  @ViewChild('contenedorGrafico') contenedorGraficoRef!: ElementRef; 
   chartInstance: Chart | null = null;
   isLoading = false;
 
@@ -57,7 +58,26 @@ export class Dashboard implements OnInit {
     this.fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
 
     await this.cargarCatalogos();
-    await this.cargarDespachos();
+    await this.cargarDespachos(); // Primera carga con pantalla de loading
+    
+    // Encendemos el motor silencioso
+    this.iniciarSincronizacionSilenciosa();
+  }
+
+  ngOnDestroy() {
+    if (this.autoRefreshSub) {
+      clearInterval(this.autoRefreshSub);
+    }
+  }
+
+  iniciarSincronizacionSilenciosa() {
+    this.autoRefreshSub = setInterval(async () => {
+      if (!this.isLoading) {
+        try {
+          await this.cargarDespachos(true); // El "true" le dice que lo haga en silencio
+        } catch (err) {}
+      }
+    }, 10000); // 10 segundos
   }
 
   async cargarCatalogos() {
@@ -68,8 +88,9 @@ export class Dashboard implements OnInit {
     this.clientes = clis || [];
   }
 
-  async cargarDespachos() {
-    this.isLoading = true;
+  // Agregamos el parámetro isSilent para no interrumpir al usuario
+  async cargarDespachos(isSilent = false) {
+    if (!isSilent) this.isLoading = true;
     try {
       const { data, error } = await this.supabase.despachos
         .select(`
@@ -84,9 +105,9 @@ export class Dashboard implements OnInit {
       this.despachosCrudos = data || [];
       this.aplicarFiltros();
     } catch (error: any) {
-      this.toast.showError('Error al cargar datos: ' + error.message);
+      if (!isSilent) this.toast.showError('Error al cargar datos: ' + error.message);
     } finally {
-      this.isLoading = false;
+      if (!isSilent) this.isLoading = false;
     }
   }
 
@@ -123,20 +144,28 @@ export class Dashboard implements OnInit {
 
   dibujarGrafico() {
     if (!this.rendimientoChartRef) return;
-    if (this.chartInstance) this.chartInstance.destroy();
-
-    this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
-      type: 'bar',
-      data: {
-        labels: ['Volumen Global (KG)'],
-        datasets: [
-          { label: 'Programado (Kg)', data: [this.kpiProgramadoKg], backgroundColor: '#FBBF24', borderRadius: 4 },
-          { label: 'Vendido (Kg)', data: [this.kpiVendidoKg], backgroundColor: '#10B981', borderRadius: 4 },
-          { label: 'Retornado/Merma (Kg)', data: [this.kpiRetornadoKg], backgroundColor: '#EF4444', borderRadius: 4 }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
+    
+    // MEJORA: En vez de destruir la gráfica cada 10 seg, solo actualizamos sus datos suavemente
+    if (this.chartInstance) {
+      this.chartInstance.data.datasets[0].data = [this.kpiProgramadoKg];
+      this.chartInstance.data.datasets[1].data = [this.kpiVendidoKg];
+      this.chartInstance.data.datasets[2].data = [this.kpiRetornadoKg];
+      this.chartInstance.update();
+    } else {
+      // Si no existe, la creamos por primera vez
+      this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
+        type: 'bar',
+        data: {
+          labels: ['Volumen Global (KG)'],
+          datasets: [
+            { label: 'Programado (Kg)', data: [this.kpiProgramadoKg], backgroundColor: '#FBBF24', borderRadius: 4 },
+            { label: 'Vendido (Kg)', data: [this.kpiVendidoKg], backgroundColor: '#10B981', borderRadius: 4 },
+            { label: 'Retornado/Merma (Kg)', data: [this.kpiRetornadoKg], backgroundColor: '#EF4444', borderRadius: 4 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
   }
 
   async exportarExcel() {
@@ -201,7 +230,6 @@ export class Dashboard implements OnInit {
     worksheet.getColumn(22).width = 30; 
     worksheet.getColumn(23).width = 35; 
 
-    // Captura de imagen (html2canvas)
     if (this.contenedorGraficoRef) {
       try {
         const canvas = await html2canvas(this.contenedorGraficoRef.nativeElement, { scale: 2, backgroundColor: '#ffffff' });

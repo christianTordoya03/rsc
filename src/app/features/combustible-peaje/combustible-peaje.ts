@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, inject, AfterViewInit, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { Chart, registerables } from 'chart.js';
@@ -16,9 +16,10 @@ Chart.register(...registerables);
   imports: [CommonModule, ReactiveFormsModule, FormsModule, ConfirmModalComponent],
   templateUrl: './combustible-peaje.html'
 })
-export class CombustiblePeaje implements OnInit, AfterViewInit {
+export class CombustiblePeaje implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('rendimientoChart') rendimientoChartRef!: ElementRef;
   chartInstance: Chart | null = null;
+  private autoRefreshSub: any;
 
   private fb = inject(FormBuilder);
   private toast = inject(ToastService);
@@ -35,11 +36,9 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
   registros: any[] = []; 
   registrosFiltrados: any[] = []; 
   
-  // Novedad: Selector dinámico
   placasUnicas: string[] = [];
   filtroPlacaActiva = 'TODAS';
 
-  // KPIs
   kpiOptimas = 0; kpiAlertas = 0; kpiGastoTotal = 0;
 
   combustibleForm: FormGroup = this.fb.group({
@@ -61,6 +60,7 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     if (session) this.userId = session.user.id;
     
     await this.cargarTickets(); 
+    this.iniciarSincronizacionSilenciosa();
 
     this.combustibleForm.valueChanges.subscribe(val => {
       if (!this.isEditing && this.showForm) {
@@ -71,8 +71,28 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
   ngAfterViewInit() { setTimeout(() => this.actualizarGrafico(), 100); }
 
-  async cargarTickets() {
-    this.isLoading = true;
+  ngOnDestroy() {
+    if (this.autoRefreshSub) {
+      clearInterval(this.autoRefreshSub);
+    }
+  }
+
+  iniciarSincronizacionSilenciosa() {
+    this.autoRefreshSub = setInterval(async () => {
+      if (!this.isLoading && !this.showForm) {
+        try {
+          await this.cargarTickets(true);
+        } catch (err) {}
+      }
+    }, 10000); 
+  }
+
+  trackById(index: number, item: any): string {
+    return item.id;
+  }
+
+  async cargarTickets(isSilent = false) {
+    if (!isSilent) this.isLoading = true;
     try {
       const { data, error } = await this.supabase.from('control_combustible')
         .select('*')
@@ -81,19 +101,17 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
       if (error) throw error;
       this.registros = data || [];
       
-      // Extraer las placas únicas para el combo box
       const placasArray = this.registros.map(r => r.placa).filter(Boolean);
       this.placasUnicas = ['TODAS', ...Array.from(new Set(placasArray))];
       
       this.filtrarDatos();
     } catch (error: any) {
-      this.toast.showError('Error al cargar tickets de combustible');
+      if (!isSilent) this.toast.showError('Error al cargar tickets de combustible');
     } finally {
-      this.isLoading = false;
+      if (!isSilent) this.isLoading = false;
     }
   }
 
-  // --- FILTRO DINÁMICO ---
   filtrarDatos() {
     if (this.filtroPlacaActiva === 'TODAS') {
       this.registrosFiltrados = [...this.registros];
@@ -121,25 +139,29 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
 
   actualizarGrafico() {
     if (!this.rendimientoChartRef) return;
-    if (this.chartInstance) this.chartInstance.destroy();
 
     const ordenados = [...this.registrosFiltrados].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
     
-    // Si se filtró por placa, solo ponemos la fecha; si están todas, ponemos fecha + placa
     const labels = ordenados.map(r => this.filtroPlacaActiva === 'TODAS' ? `${r.fecha} (${r.placa})` : r.fecha);
     const dataRendimiento = ordenados.map(r => ((r.km_final || 0) - (r.km_inicial || 0)) / (r.galones || 1));
 
-    this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Rendimiento (Km/gal)', data: dataRendimiento, borderColor: '#10B981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, pointBackgroundColor: '#10B981', fill: true, tension: 0.4
-        }]
-      },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
+    if (this.chartInstance) {
+      this.chartInstance.data.labels = labels;
+      this.chartInstance.data.datasets[0].data = dataRendimiento;
+      this.chartInstance.update();
+    } else {
+      this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Rendimiento (Km/gal)', data: dataRendimiento, borderColor: '#10B981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 2, pointBackgroundColor: '#10B981', fill: true, tension: 0.4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
   }
 
   async onSubmit() {
@@ -271,7 +293,6 @@ export class CombustiblePeaje implements OnInit, AfterViewInit {
     worksheet.getRow(7).eachCell((cell) => { cell.font = headerFont; cell.border = border; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2EFDA' } }; });
     worksheet.columns = [{ width: 6 }, { width: 12 }, { width: 10 }, { width: 25 }, { width: 20 }, { width: 12 }, { width: 12 }, { width: 12 }, { width: 10 }, { width: 15 }, { width: 14 }, { width: 12 }, { width: 30 }];
 
-    // Exporta solo la tabla filtrada
     this.registrosFiltrados.forEach((reg, index) => {
       const rec = (reg.km_final || 0) - (reg.km_inicial || 0);
       const rend = (reg.galones && reg.galones > 0) ? parseFloat((rec / reg.galones).toFixed(2)) : 0;

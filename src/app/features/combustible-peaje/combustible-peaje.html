@@ -7,7 +7,6 @@
     
     <div class="flex items-center gap-3 w-full sm:w-auto">
       
-      <!-- NUEVO: SELECTOR DE PLACA DINÁMICO -->
       <select [(ngModel)]="filtroPlacaActiva" (change)="filtrarDatos()" class="bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg focus:ring-[#4F46E5] shadow-sm">
         <option *ngFor="let placa of placasUnicas" [value]="placa">{{ placa === 'TODAS' ? '🎯 Todas las Placas' : '🚚 ' + placa }}</option>
       </select>
@@ -23,7 +22,6 @@
     </div>
   </div>
 
-  <!-- TARJETAS DE KPI (Ahora se recalcularán si eliges una placa) -->
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
     <div class="lg:col-span-1 space-y-4">
       <div class="bg-emerald-50 rounded-xl p-5 border border-emerald-100 shadow-sm">
@@ -71,8 +69,7 @@
             <td colspan="6" class="p-8 text-center text-slate-400 font-medium">No se encontraron tickets de combustible para esta placa.</td>
           </tr>
           
-          <!-- ATENCIÓN AQUÍ: Ahora recorre 'registrosFiltrados' -->
-          <tr *ngFor="let reg of registrosFiltrados" class="hover:bg-slate-50 transition-colors">
+          <tr *ngFor="let reg of registrosFiltrados; trackBy: trackById" class="hover:bg-slate-50 transition-colors">
             <td class="p-4">
               <div class="font-bold text-slate-800">{{ reg.placa }}</div>
               <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
@@ -105,7 +102,6 @@
   </div>
 </div>
 
-<!-- MODAL FORMULARIO COMBUSTIBLE Y PEAJES -->
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -120,7 +116,6 @@
           <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
           <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
             <option value="" disabled selected>Seleccione la placa...</option>
-            <!-- Placas actualizadas con el formato exacto del modulo de Rutas -->
             <option value="BSY-931">BSY-931</option><option value="AUH-927">AUH-927</option><option value="F6Z-867">F6Z-867</option><option value="BHI-940">BHI-940</option>
             <option value="BBU-840">BBU-840</option><option value="ACK-826">ACK-826</option><option value="BHH-935">BHH-935</option><option value="BBT-751">BBT-751</option>
             <option value="F4D-855">F4D-855</option><option value="AYJ-784">AYJ-784</option><option value="BAN-786">BAN-786</option><option value="B0L-756">B0L-756</option>
@@ -180,4 +175,13 @@
   </div>
 </div>
 
-<app-confirm-modal [isOpen]="showDeleteConfirm" title="¿Eliminar ticket de combustible?" message="Los registros de kilometraje y consumo de esta ruta se borrarán del historial." confirmText="Eliminar ticket" (confirm)="executeDelete()" (cancel)="cancelDelete()"></app-confirm-modal>
+<div class="relative z-[999]">
+  <app-confirm-modal 
+    [isOpen]="showDeleteConfirm" 
+    title="¿Eliminar ticket de combustible?" 
+    message="Los registros de kilometraje y consumo de esta ruta se borrarán del historial." 
+    confirmText="Eliminar ticket" 
+    (confirm)="executeDelete()" 
+    (cancel)="cancelDelete()">
+  </app-confirm-modal>
+</div>
