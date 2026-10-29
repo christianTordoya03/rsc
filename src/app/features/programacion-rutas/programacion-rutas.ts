@@ -338,7 +338,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(await file.arrayBuffer());
       
-      const worksheet = workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
+      const worksheet = workbook.getWorksheet('Imprimir') || workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
       const sheetInicial = workbook.getWorksheet('PROGRAMACION INICIAL'); 
 
       const normalize = (str: any) => {
