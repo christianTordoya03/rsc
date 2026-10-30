@@ -65,7 +65,12 @@ export class OperacionNocturnaComponent implements OnInit {
     { placa: 'B0L-756', capacidad: 4375 }, { placa: 'B7M-872', capacidad: 9310 },
     { placa: 'BAN-786', capacidad: 2500 }, { placa: 'BBT-751', capacidad: 3500 },
     { placa: 'BBU-840', capacidad: 3500 }, { placa: 'F6Y-818', capacidad: 1600 },
-    { placa: 'BEL-713', capacidad: 8250 }, { placa: 'BHH-935', capacidad: 2500 }
+    { placa: 'BEL-713', capacidad: 8250 }, { placa: 'BHH-935', capacidad: 2500 },
+
+    { placa: 'BSY-931', capacidad: 3500 }, { placa: 'AUH-927', capacidad: 3500 },
+    { placa: 'F6Z-867', capacidad: 3500 }, { placa: 'BHI-940', capacidad: 3500 },
+    { placa: 'BTB-817', capacidad: 3500 }, { placa: 'AUH-916', capacidad: 3500 },
+    { placa: 'F4D-707', capacidad: 3500 }
   ];
   estadosCilindros = ['Llenos', 'Vacíos'];
 

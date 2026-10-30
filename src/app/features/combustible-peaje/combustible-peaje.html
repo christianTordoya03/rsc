@@ -4,19 +4,29 @@
       <h1 class="text-2xl font-bold text-slate-800">Control de Combustible y Peajes</h1>
       <p class="text-sm text-slate-500">Auditoría de rendimiento, gastos y prevención de incidencias (GO-F-010)</p>
     </div>
-    
+
     <div class="flex items-center gap-3 w-full sm:w-auto">
-      
-      <select [(ngModel)]="filtroPlacaActiva" (change)="filtrarDatos()" class="bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg focus:ring-[#4F46E5] shadow-sm">
-        <option *ngFor="let placa of placasUnicas" [value]="placa">{{ placa === 'TODAS' ? '🎯 Todas las Placas' : '🚚 ' + placa }}</option>
+
+      <select [(ngModel)]="filtroPlacaActiva" (change)="filtrarDatos()"
+        class="bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg focus:ring-[#4F46E5] shadow-sm">
+        <option *ngFor="let placa of placasUnicas" [value]="placa">{{ placa === 'TODAS' ? '🎯 Todas las Placas' : '🚚 '
+          + placa }}</option>
       </select>
 
-      <button (click)="exportarExcel()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      <button (click)="exportarExcel()"
+        class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+          </path>
+        </svg>
         Exportar
       </button>
-      <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      <button (click)="openForm()"
+        class="flex-1 sm:flex-none bg-[#4F46E5] hover:bg-[#4338CA] text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
         Registrar Ticket
       </button>
     </div>
@@ -30,7 +40,7 @@
       </div>
       <div class="bg-red-50 rounded-xl p-5 border border-red-100 shadow-sm">
         <p class="text-xs font-bold text-red-600 uppercase tracking-wider">Alerta Sobreconsumo (< 5 Km/Gl)</p>
-        <p class="text-4xl font-black text-red-600 mt-2 animate-pulse">{{ kpiAlertas }}</p>
+            <p class="text-4xl font-black text-red-600 mt-2 animate-pulse">{{ kpiAlertas }}</p>
       </div>
       <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
         <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Gasto Total Periodo</p>
@@ -40,14 +50,16 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 lg:col-span-3">
       <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
         <h3 class="text-sm font-bold text-slate-400 uppercase tracking-wide">Curva de Rendimiento (Km/Gal)</h3>
-        <span *ngIf="filtroPlacaActiva !== 'TODAS'" class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full text-xs">Viendo: {{ filtroPlacaActiva }}</span>
+        <span *ngIf="filtroPlacaActiva !== 'TODAS'"
+          class="bg-indigo-100 text-indigo-700 font-bold px-3 py-1 rounded-full text-xs">Viendo: {{ filtroPlacaActiva
+          }}</span>
       </div>
       <div class="h-64 relative w-full"><canvas #rendimientoChart></canvas></div>
     </div>
   </div>
 
   <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    
+
     <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center">
       <div class="w-8 h-8 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -66,9 +78,10 @@
         </thead>
         <tbody class="divide-y divide-slate-100 text-sm">
           <tr *ngIf="registrosFiltrados.length === 0">
-            <td colspan="6" class="p-8 text-center text-slate-400 font-medium">No se encontraron tickets de combustible para esta placa.</td>
+            <td colspan="6" class="p-8 text-center text-slate-400 font-medium">No se encontraron tickets de combustible
+              para esta placa.</td>
           </tr>
-          
+
           <tr *ngFor="let reg of registrosFiltrados; trackBy: trackById" class="hover:bg-slate-50 transition-colors">
             <td class="p-4">
               <div class="font-bold text-slate-800">{{ reg.placa }}</div>
@@ -83,17 +96,32 @@
               <div class="text-slate-500 text-xs">{{ reg.galones || 0 }} gls.</div>
             </td>
             <td class="p-4 text-center">
-              <div class="font-medium text-slate-800">S/ {{ ((reg.costo_total || 0) + (reg.gasto_peaje || 0)) | number:'1.2-2' }}</div>
-              <div class="text-[10px] text-amber-600 font-bold" *ngIf="reg.gasto_peaje > 0">+ S/ {{reg.gasto_peaje}} Peaje</div>
+              <div class="font-medium text-slate-800">S/ {{ ((reg.costo_total || 0) + (reg.gasto_peaje || 0)) |
+                number:'1.2-2' }}</div>
+              <div class="text-[10px] text-amber-600 font-bold" *ngIf="reg.gasto_peaje > 0">+ S/ {{reg.gasto_peaje}}
+                Peaje</div>
             </td>
             <td class="p-4 text-center">
-              <span class="px-3 py-1 rounded-full text-xs font-bold" [ngClass]="(((reg.km_final || 0) - (reg.km_inicial || 0))/(reg.galones || 1)) >= 5 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+              <span class="px-3 py-1 rounded-full text-xs font-bold"
+                [ngClass]="(((reg.km_final || 0) - (reg.km_inicial || 0))/(reg.galones || 1)) >= 5 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
                 {{ (((reg.km_final || 0) - (reg.km_inicial || 0))/(reg.galones || 1)) | number:'1.1-2' }} Km/gl
               </span>
             </td>
             <td class="p-4 text-right space-x-2">
-              <button (click)="openForm(reg)" class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded hover:bg-indigo-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button>
-              <button (click)="confirmDelete(reg.id)" class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded hover:bg-red-50"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+              <button (click)="openForm(reg)"
+                class="text-slate-400 hover:text-[#4F46E5] p-2 bg-slate-100 rounded hover:bg-indigo-50"><svg
+                  class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                  </path>
+                </svg></button>
+              <button (click)="confirmDelete(reg.id)"
+                class="text-slate-400 hover:text-red-500 p-2 bg-slate-100 rounded hover:bg-red-50"><svg class="w-4 h-4"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                  </path>
+                </svg></button>
             </td>
           </tr>
         </tbody>
@@ -105,61 +133,108 @@
 <div *ngIf="showForm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
-      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'COMPLETAR TICKET DEL CHOFER' : 'CONTROL DE KILOMETRAJE DIARIO' }}</h2>
-      <button (click)="closeForm()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+      <h2 class="text-white text-lg font-bold tracking-wider">{{ isEditing ? 'COMPLETAR TICKET DEL CHOFER' : 'CONTROL DE
+        KILOMETRAJE DIARIO' }}</h2>
+      <button (click)="closeForm()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none"
+          stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg></button>
     </div>
 
     <div class="p-6 overflow-y-auto flex-1 bg-slate-50/50" [formGroup]="combustibleForm">
       <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-3 gap-4 shadow-sm">
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">FECHA</label><input type="date" formControlName="fecha" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">FECHA</label><input type="date"
+            formControlName="fecha" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">PLACA</label>
           <select formControlName="placa" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
             <option value="" disabled selected>Seleccione la placa...</option>
-            <option value="BSY-931">BSY-931</option><option value="B7M-872">B7M-872</option><option value="BSY-931">BTB-817</option><option value="AUH-927">AUH-927</option><option value="F6Z-867">F6Z-867</option><option value="BHI-940">BHI-940</option>
-            
-            <option value="BBU-840">BBU-840</option><option value="ACK-826">ACK-826</option><option value="BHH-935">BHH-935</option><option value="BBT-751">BBT-751</option>
-            <option value="F4D-855">F4D-855</option><option value="AYJ-784">AYJ-784</option><option value="BAN-786">BAN-786</option><option value="B0L-756">B0L-756</option>
-            <option value="F4B-804">F4B-804</option><option value="BEL-713">BEL-713</option><option value="F6Y-818">F6Y-818</option>
+
+            <!-- REPARTO ESTÁNDAR (12) -->
+            <option value="BBU-840">BBU-840</option>
+            <option value="ACK-826">ACK-826</option>
+            <option value="BHH-935">BHH-935</option>
+            <option value="BBT-751">BBT-751</option>
+            <option value="F4D-855">F4D-855</option>
+            <option value="AYJ-784">AYJ-784</option>
+            <option value="BAN-786">BAN-786</option>
+            <option value="B0L-756">B0L-756</option>
+            <option value="F4B-804">F4B-804</option>
+            <option value="BEL-713">BEL-713</option>
+            <option value="F6Y-818">F6Y-818</option>
+            <option value="B7M-872">B7M-872</option>
+
+            <!-- SEPARADOR VISUAL -->
+            <option disabled class="font-bold text-indigo-400 text-center">─── INDUSTRIAS ───</option>
+
+            <!-- REPARTO A INDUSTRIAS (7) -->
+            <option value="BSY-931">BSY-931</option>
+            <option value="F6Z-867">F6Z-867</option>
+            <option value="AUH-927">AUH-927</option>
+            <option value="BHI-940">BHI-940</option>
+            <option value="BTB-817">BTB-817</option>
+            <option value="AUH-916">AUH-916</option>
+            <option value="F4D-717">F4D-717</option>
           </select>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">TIPO RECORRIDO</label>
-          <select formControlName="tipoRecorrido" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
-            <option value="Primera vuelta">Primera vuelta</option><option value="Segunda vuelta">Segunda vuelta</option><option value="Adicional">Adicional</option>
+          <select formControlName="tipoRecorrido"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]">
+            <option value="Primera vuelta">Primera vuelta</option>
+            <option value="Segunda vuelta">Segunda vuelta</option>
+            <option value="Adicional">Adicional</option>
           </select>
         </div>
-        <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1">ESTACIÓN GRIFO</label><input type="text" formControlName="estacion" placeholder="Opcional. Ej. PRIMAX REIMIJ SRL" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label><input type="text" formControlName="conductor" placeholder="Opcional" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div class="md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-1">ESTACIÓN
+            GRIFO</label><input type="text" formControlName="estacion" placeholder="Opcional. Ej. PRIMAX REIMIJ SRL"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">CONDUCTOR</label><input type="text"
+            formControlName="conductor" placeholder="Opcional"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
       </div>
 
-      <div class="bg-white border border-indigo-100 rounded-xl p-5 mb-5 grid grid-cols-2 md:grid-cols-5 gap-4 shadow-sm items-end">
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO INICIAL</label><input type="number" formControlName="odoInicial" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO FINAL</label><input type="number" formControlName="odoFinal" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+      <div
+        class="bg-white border border-indigo-100 rounded-xl p-5 mb-5 grid grid-cols-2 md:grid-cols-5 gap-4 shadow-sm items-end">
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO INICIAL</label><input type="number"
+            formControlName="odoInicial" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">ODO FINAL</label><input type="number"
+            formControlName="odoFinal" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
         <div class="bg-indigo-50 p-2 rounded-lg text-center border border-indigo-100">
           <label class="block text-xs font-bold text-[#4F46E5] mb-1">KM RECORRIDO</label>
           <p class="text-xl font-black text-[#4F46E5]">{{ kmRecorrido }}</p>
         </div>
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">GALONES</label><input type="number" formControlName="galones" step="0.1" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
-        <div><label class="block text-xs font-bold text-slate-500 mb-1">PRECIO X GAL</label><input type="number" formControlName="precioGalon" step="0.1" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">GALONES</label><input type="number"
+            formControlName="galones" step="0.1"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
+        <div><label class="block text-xs font-bold text-slate-500 mb-1">PRECIO X GAL</label><input type="number"
+            formControlName="precioGalon" step="0.1"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></div>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-xl p-5 mb-5 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">GASTO DE PEAJE (S/)</label>
-          <input type="number" formControlName="gasto_peaje" step="0.1" placeholder="Ej. 15.50" class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono font-bold text-amber-700">
+          <input type="number" formControlName="gasto_peaje" step="0.1" placeholder="Ej. 15.50"
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5] font-mono font-bold text-amber-700">
           <p class="text-[10px] text-slate-400 mt-1">Dejar en 0 si la ruta no incluyó peajes.</p>
         </div>
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">OBSERVACIONES / ALERTAS</label>
-          <textarea formControlName="observaciones" rows="2" placeholder="Ej. Llantas bajas, desvío de ruta..." class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></textarea>
+          <textarea formControlName="observaciones" rows="2" placeholder="Ej. Llantas bajas, desvío de ruta..."
+            class="w-full rounded-lg border-slate-300 text-sm focus:ring-[#4F46E5]"></textarea>
         </div>
       </div>
 
       <div class="grid grid-cols-2 gap-4 mb-2">
-        <div class="p-4 rounded-xl text-center border" [ngClass]="rendimiento >= 5 ? 'bg-emerald-50 border-emerald-200' : (rendimiento > 0 ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200')">
-          <label class="block text-xs font-bold mb-1" [ngClass]="rendimiento >= 5 ? 'text-emerald-700' : (rendimiento > 0 ? 'text-red-700' : 'text-slate-500')">RENDIMIENTO (Km/gl)</label>
-          <p class="text-2xl font-black" [ngClass]="rendimiento >= 5 ? 'text-emerald-700' : (rendimiento > 0 ? 'text-red-700' : 'text-slate-500')">{{ rendimiento | number:'1.2-2' }}</p>
+        <div class="p-4 rounded-xl text-center border"
+          [ngClass]="rendimiento >= 5 ? 'bg-emerald-50 border-emerald-200' : (rendimiento > 0 ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200')">
+          <label class="block text-xs font-bold mb-1"
+            [ngClass]="rendimiento >= 5 ? 'text-emerald-700' : (rendimiento > 0 ? 'text-red-700' : 'text-slate-500')">RENDIMIENTO
+            (Km/gl)</label>
+          <p class="text-2xl font-black"
+            [ngClass]="rendimiento >= 5 ? 'text-emerald-700' : (rendimiento > 0 ? 'text-red-700' : 'text-slate-500')">{{
+            rendimiento | number:'1.2-2' }}</p>
         </div>
         <div class="bg-red-50 p-4 rounded-xl text-center border border-red-100">
           <label class="block text-xs font-bold text-red-600 mb-1">COSTO TOTAL (S/)</label>
@@ -170,19 +245,18 @@
     </div>
 
     <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3 flex-shrink-0">
-      <button (click)="closeForm()" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
-      <button (click)="onSubmit()" class="px-5 py-2.5 text-sm font-bold text-white bg-[#4F46E5] rounded-lg hover:bg-[#4338CA] shadow-sm">Guardar Registro</button>
+      <button (click)="closeForm()"
+        class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50">Cancelar</button>
+      <button (click)="onSubmit()"
+        class="px-5 py-2.5 text-sm font-bold text-white bg-[#4F46E5] rounded-lg hover:bg-[#4338CA] shadow-sm">Guardar
+        Registro</button>
     </div>
   </div>
 </div>
 
 <div class="relative z-[999]">
-  <app-confirm-modal 
-    [isOpen]="showDeleteConfirm" 
-    title="¿Eliminar ticket de combustible?" 
-    message="Los registros de kilometraje y consumo de esta ruta se borrarán del historial." 
-    confirmText="Eliminar ticket" 
-    (confirm)="executeDelete()" 
-    (cancel)="cancelDelete()">
+  <app-confirm-modal [isOpen]="showDeleteConfirm" title="¿Eliminar ticket de combustible?"
+    message="Los registros de kilometraje y consumo de esta ruta se borrarán del historial."
+    confirmText="Eliminar ticket" (confirm)="executeDelete()" (cancel)="cancelDelete()">
   </app-confirm-modal>
 </div>

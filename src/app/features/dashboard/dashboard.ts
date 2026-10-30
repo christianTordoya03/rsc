@@ -28,7 +28,7 @@ export class Dashboard implements OnInit, OnDestroy {
   despachosFiltrados: any[] = [];
   
   // Catálogos para filtros
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'B7M-872', 'BTB-817'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872', 'BTB-817', 'AUH-916', 'F4D-707'];
   operadores: any[] = [];
   clientes: any[] = [];
 
@@ -45,6 +45,10 @@ export class Dashboard implements OnInit, OnDestroy {
   kpiRetornadoKg = 0;
   kpiPorcentajeVenta = 0;
   kpiPorcentajeRetorno = 0;
+
+  // Variables de control para la gráfica
+  modoUnidad: 'KG' | 'CILINDROS' = 'KG';
+  modoAgrupacion: 'GLOBAL' | 'PLACA' = 'GLOBAL';
 
   constructor(
     private supabase: SupabaseService,
@@ -141,33 +145,113 @@ export class Dashboard implements OnInit, OnDestroy {
     this.kpiPorcentajeVenta = this.kpiProgramadoKg > 0 ? (this.kpiVendidoKg / this.kpiProgramadoKg) * 100 : 0;
     this.kpiPorcentajeRetorno = this.kpiProgramadoKg > 0 ? (this.kpiRetornadoKg / this.kpiProgramadoKg) * 100 : 0;
 
-    this.dibujarGrafico();
+    this.actualizarDatosGrafico();
   }
 
-  dibujarGrafico() {
+  actualizarDatosGrafico() {
     if (!this.rendimientoChartRef) return;
-    
-    // MEJORA: En vez de destruir la gráfica cada 10 seg, solo actualizamos sus datos suavemente
-    if (this.chartInstance) {
-      this.chartInstance.data.datasets[0].data = [this.kpiProgramadoKg];
-      this.chartInstance.data.datasets[1].data = [this.kpiVendidoKg];
-      this.chartInstance.data.datasets[2].data = [this.kpiRetornadoKg];
-      this.chartInstance.update();
+
+    let labels: string[] = [];
+    let dataProg: number[] = [];
+    let dataVend: number[] = [];
+    let dataMerma: number[] = [];
+
+    // Función mágica que convierte a KG o lo deja en unidades físicas
+    const factor = (qty: number, peso: number) => this.modoUnidad === 'KG' ? (qty * peso) : qty;
+
+    if (this.modoAgrupacion === 'GLOBAL') {
+      labels = [this.modoUnidad === 'KG' ? 'Volumen Global (KG)' : 'Unidades Totales (Cilindros)'];
+      let prog = 0, vend = 0, merma = 0;
+      
+      this.despachosFiltrados.forEach(r => {
+        prog += factor(r.p05||0, 5) + factor(r.p10||0, 10) + factor(r.p15||0, 15) + factor(r.p45||0, 45);
+        vend += factor(r.v05||0, 5) + factor(r.v10||0, 10) + factor(r.v15||0, 15) + factor(r.v45||0, 45);
+        merma += factor(r.m05||0, 5) + factor(r.m10||0, 10) + factor(r.m15||0, 15) + factor(r.m45||0, 45);
+      });
+
+      dataProg = [prog];
+      dataVend = [vend];
+      dataMerma = [merma];
     } else {
-      // Si no existe, la creamos por primera vez
-      this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
-        type: 'bar',
-        data: {
-          labels: ['Volumen Global (KG)'],
-          datasets: [
-            { label: 'Programado (Kg)', data: [this.kpiProgramadoKg], backgroundColor: '#FBBF24', borderRadius: 4 },
-            { label: 'Vendido (Kg)', data: [this.kpiVendidoKg], backgroundColor: '#10B981', borderRadius: 4 },
-            { label: 'Retornado/Merma (Kg)', data: [this.kpiRetornadoKg], backgroundColor: '#EF4444', borderRadius: 4 }
-          ]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
+      // AGRUPACIÓN POR PLACA (Detecta qué placas trabajaron y suma sus valores)
+      const placasMap = new Map<string, {prog: number, vend: number, merma: number}>();
+      
+      this.despachosFiltrados.forEach(r => {
+        const placa = r.placa || 'SIN PLACA';
+        if (!placasMap.has(placa)) placasMap.set(placa, {prog: 0, vend: 0, merma: 0});
+        
+        const p = placasMap.get(placa)!;
+        p.prog += factor(r.p05||0, 5) + factor(r.p10||0, 10) + factor(r.p15||0, 15) + factor(r.p45||0, 45);
+        p.vend += factor(r.v05||0, 5) + factor(r.v10||0, 10) + factor(r.v15||0, 15) + factor(r.v45||0, 45);
+        p.merma += factor(r.m05||0, 5) + factor(r.m10||0, 10) + factor(r.m15||0, 15) + factor(r.m45||0, 45);
+      });
+
+      labels = Array.from(placasMap.keys()).sort();
+      labels.forEach(placa => {
+        const p = placasMap.get(placa)!;
+        dataProg.push(p.prog);
+        dataVend.push(p.vend);
+        dataMerma.push(p.merma);
       });
     }
+
+    if (this.chartInstance) {
+      this.chartInstance.destroy();
+    }
+
+    // 🔥 PLUGIN NATIVO PARA ETIQUETAS DE DATOS 🔥
+    const pluginEtiquetas = {
+      id: 'etiquetasDatos',
+      afterDatasetsDraw(chart: any) {
+        const { ctx } = chart;
+        chart.data.datasets.forEach((dataset: any, i: number) => {
+          const meta = chart.getDatasetMeta(i);
+          meta.data.forEach((bar: any, index: number) => {
+            const data = dataset.data[index];
+            if (data > 0) { // Solo dibuja el número si es mayor a cero
+              ctx.font = 'bold 11px sans-serif';
+              ctx.fillStyle = '#475569'; // Color de texto slate-600
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              
+              // Le da formato con separador de miles (Ej: 31,065)
+              const textoFormateado = Number(data).toLocaleString(); 
+              
+              // Dibuja el texto 5 pixeles por encima de la barra
+              ctx.fillText(textoFormateado, bar.x, bar.y - 5);
+            }
+          });
+        });
+      }
+    };
+
+    this.chartInstance = new Chart(this.rendimientoChartRef.nativeElement, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Programado', data: dataProg, backgroundColor: '#FBBF24', borderRadius: 4 },
+          { label: 'Vendido', data: dataVend, backgroundColor: '#10B981', borderRadius: 4 },
+          { label: 'Retornado/Merma', data: dataMerma, backgroundColor: '#EF4444', borderRadius: 4 }
+        ]
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        layout: {
+          padding: { top: 25 } // Espacio extra arriba para que los números no se corten
+        },
+        scales: { 
+          y: { 
+            title: { 
+              display: true, 
+              text: this.modoUnidad === 'KG' ? 'Kilogramos (KG)' : 'Unidades Físicas (Cilindros)' 
+            } 
+          } 
+        }
+      },
+      plugins: [pluginEtiquetas] // <-- INYECTAMOS EL PLUGIN AQUÍ
+    });
   }
 
   async exportarExcel() {

@@ -31,21 +31,51 @@
         </span>
       </div>
       
-      <div class="flex flex-wrap gap-2">
-        <button type="button" 
-                (click)="filtroPlaca = []; aplicarFiltros()"
-                [ngClass]="filtroPlaca.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5] ring-2 ring-[#4F46E5]/20 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
-                class="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200">
-          TODAS LAS UNIDADES
-        </button>
+      <!-- Contenedor Dividido de Placas -->
+      <div class="flex flex-col gap-5 mt-2">
         
-        <button *ngFor="let p of placas" 
-                type="button"
-                (click)="togglePlaca(p)"
-                [ngClass]="filtroPlaca.includes(p) ? 'bg-[#4F46E5] text-white border-[#4F46E5] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:border-[#4F46E5]'"
-                class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 uppercase">
-          {{ p }}
-        </button>
+        <!-- Fila 1: Flota Estándar -->
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block flex items-center gap-1">
+            <div class="w-1.5 h-1.5 rounded-full bg-slate-400"></div> Reparto Estándar
+          </span>
+          <div class="flex flex-wrap gap-2 items-center">
+            <!-- Botón Maestro -->
+            <button type="button" 
+                    (click)="filtroPlaca = []; aplicarFiltros()"
+                    [ngClass]="filtroPlaca.length === 0 ? 'bg-[#4F46E5] text-white border-[#4F46E5] ring-2 ring-[#4F46E5]/20 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'"
+                    class="px-4 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 mr-2">
+              TODAS LAS UNIDADES
+            </button>
+            
+            <!-- Botones Estándar (Los primeros 12 del arreglo) -->
+            <button *ngFor="let p of placas | slice:0:12" 
+                    type="button"
+                    (click)="togglePlaca(p)"
+                    [ngClass]="filtroPlaca.includes(p) ? 'bg-[#4F46E5] text-white border-[#4F46E5] shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:border-[#4F46E5]'"
+                    class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 uppercase">
+              {{ p }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Fila 2: Flota Industrias -->
+        <div>
+          <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2 block flex items-center gap-1">
+            <div class="w-1.5 h-1.5 rounded-full bg-indigo-400"></div> Reparto Industrias
+          </span>
+          <div class="flex flex-wrap gap-2">
+            <!-- Botones Industrias (Del 12 en adelante). Tienen un fondo celeste por defecto para diferenciarlos -->
+            <button *ngFor="let p of placas | slice:12:20" 
+                    type="button"
+                    (click)="togglePlaca(p)"
+                    [ngClass]="filtroPlaca.includes(p) ? 'bg-[#4F46E5] text-white border-[#4F46E5] shadow-md' : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:border-[#4F46E5] hover:bg-white'"
+                    class="px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 uppercase">
+              {{ p }}
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -126,12 +156,48 @@
     </div>
   </div>
 
-  <!-- Gráfico de Comparación -->
-  <div #contenedorGrafico class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-80 relative w-full flex flex-col mt-4">
-    <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2 uppercase tracking-wider">
-      Comparativa de Volumen Movilizado (Kilogramos)
-    </h3>
-    <div class="flex-1 relative w-full">
+  <!-- Gráfico de Comparación Dinámico -->
+  <div #contenedorGrafico class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 h-[420px] relative w-full flex flex-col mt-4">
+    
+    <!-- Controles de la Gráfica -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-slate-100 pb-3 gap-4">
+      <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider m-0">
+        Comparativa de Volumen Movilizado
+      </h3>
+      
+      <div class="flex flex-wrap gap-3">
+        <!-- Botonera: KG vs CILINDROS -->
+        <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <button (click)="modoUnidad = 'KG'; actualizarDatosGrafico()" 
+                  [ngClass]="modoUnidad === 'KG' ? 'bg-white shadow-sm text-[#4F46E5] border-slate-200' : 'text-slate-500 hover:text-slate-700 border-transparent'"
+                  class="px-3 py-1 text-xs font-bold rounded-md border transition-all">
+            EN KILOGRAMOS (KG)
+          </button>
+          <button (click)="modoUnidad = 'CILINDROS'; actualizarDatosGrafico()" 
+                  [ngClass]="modoUnidad === 'CILINDROS' ? 'bg-white shadow-sm text-[#4F46E5] border-slate-200' : 'text-slate-500 hover:text-slate-700 border-transparent'"
+                  class="px-3 py-1 text-xs font-bold rounded-md border transition-all">
+            EN CILINDROS (U)
+          </button>
+        </div>
+
+        <!-- Botonera: GLOBAL vs POR PLACA -->
+        <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+          <button (click)="modoAgrupacion = 'GLOBAL'; actualizarDatosGrafico()" 
+                  [ngClass]="modoAgrupacion === 'GLOBAL' ? 'bg-white shadow-sm text-[#4F46E5] border-slate-200' : 'text-slate-500 hover:text-slate-700 border-transparent'"
+                  class="px-3 py-1 text-xs font-bold rounded-md border transition-all">
+            RESUMEN GLOBAL
+          </button>
+          <button (click)="modoAgrupacion = 'PLACA'; actualizarDatosGrafico()" 
+                  [ngClass]="modoAgrupacion === 'PLACA' ? 'bg-white shadow-sm text-[#4F46E5] border-slate-200' : 'text-slate-500 hover:text-slate-700 border-transparent'"
+                  class="px-3 py-1 text-xs font-bold rounded-md border transition-all">
+            BARRAS POR PLACA
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lienzo del Gráfico -->
+    <div class="flex-1 relative w-full mt-2">
       <canvas #rendimientoChart></canvas>
     </div>
   </div>
