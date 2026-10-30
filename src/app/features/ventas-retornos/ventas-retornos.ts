@@ -183,6 +183,8 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
   actualizarGrafico() {
     if (!this.comparativaChartRef) return;
 
+    // AHORA BASAMOS LA GRÁFICA EN `this.registros` (que es el arreglo ya filtrado)
+    // en lugar de usar `this.registrosBase` o un arreglo estático.
     const sumVentas = [
       this.registros.reduce((acc, r) => acc + r.v05, 0),
       this.registros.reduce((acc, r) => acc + r.v10, 0),
@@ -340,7 +342,8 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
 
     worksheet.mergeCells('D1:T2');
     const titleCell = worksheet.getCell('D1');
-    titleCell.value = `LISTA MAESTRA DE GLP ENVASADO (${this.fechaInicio} al ${this.fechaFin})`;
+    const subtituloFiltro = this.terminoBusqueda ? ` - FILTRO: "${this.terminoBusqueda.toUpperCase()}"` : '';
+    titleCell.value = `LISTA MAESTRA DE GLP ENVASADO (${this.fechaInicio} al ${this.fechaFin})${subtituloFiltro}`;
     titleCell.font = { bold: true, size: 16 };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -387,6 +390,14 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `GO-F-007_Ventas_Retornos_${new Date().getTime()}.xlsx`);
+    let nombreFiltro = 'GENERAL';
+    if (this.terminoBusqueda) {
+      // Limpiamos el texto para quitar espacios o caracteres prohibidos en nombres de archivos Windows
+      nombreFiltro = this.terminoBusqueda.trim().replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+    }
+    
+    // Genera un nombre como: GO-F-007_Ventas_BBU_840_2026-10-01_al_2026-10-31.xlsx
+    const nombreArchivo = `GO-F-007_Ventas_${nombreFiltro}_${this.fechaInicio}_al_${this.fechaFin}.xlsx`;
+    saveAs(new Blob([buffer]), nombreArchivo);
   }
 }

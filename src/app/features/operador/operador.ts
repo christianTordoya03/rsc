@@ -28,7 +28,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
   rutaActual: any = null;
   archivoEvidencia: File | null = null;
 
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872'];
 
   checkinForm: FormGroup;
   checkoutForm: FormGroup;
@@ -196,9 +196,20 @@ export class OperadorComponent implements OnInit, OnDestroy {
 
   async cargarRutasReales() {
     if (!this.datosJornada?.placa) return;
+
+    const hoyReal = new Date().toISOString().split('T')[0];
+
+    if (this.datosJornada.fecha !== hoyReal) {
+      this.rutasAsignadas = []; // Vaciamos la pantalla a la fuerza
+      this.rutaActual = null;
+      this.showDespachoModal = false;
+      return; // Cortamos la búsqueda, así Logística no haya anulado las rutas, el chofer no las verá.
+    }
+
     const { data, error } = await this.supabase.despachos
       .select(`*, clientes(razon_social, direccion)`)
       .eq('placa', this.datosJornada.placa)
+      .eq('fecha_despacho', this.datosJornada.fecha) 
       .neq('estado', 'COMPLETADO') 
       .neq('estado', 'ANULADO')
       .order('creado_en', { ascending: true });

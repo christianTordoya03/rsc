@@ -29,14 +29,19 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   clientesActivos: any[] = [];
   clientesNoEncontrados: string[] = [];
   
+  // MODAL FECHA IMPORTACION
+  showModalFechaImportacion = false;
+  fechaImportacion = '';
+  
   placas = [
     'BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 
-    'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818'
+    'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'B7M-872'
   ];
 
   rutaForm: FormGroup;
   filtroCliente = '';
   filtroPlaca = '';
+  filtroFecha = new Date().toISOString().split('T')[0]; // POR DEFECTO CARGA "HOY"
 
   paginaPendientes = 1;
   paginaHistorial = 1;
@@ -102,6 +107,23 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     this.confirmDialog.isOpen = false;
   }
 
+  // ==== LOGICA DEL MODAL DE FECHA DE IMPORTACION ====
+  abrirModalFechaImportacion() {
+    this.fechaImportacion = this.filtroFecha; 
+    this.showModalFechaImportacion = true;
+  }
+
+  cerrarModalFechaImportacion() {
+    this.showModalFechaImportacion = false;
+  }
+
+  continuarImportacion() {
+    if (!this.fechaImportacion) return this.toast.showWarning('Debe seleccionar una fecha');
+    this.showModalFechaImportacion = false;
+    this.fileInput.nativeElement.click(); 
+  }
+  // =================================================
+
   ejecutarAccionConfirmada() {
     const { actionType, payload } = this.confirmDialog;
     this.cerrarConfirmacion();
@@ -145,7 +167,8 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   }
 
   cargarErroresGuardados() {
-    const erroresGuardados = localStorage.getItem('rutasErroresClientes_' + this.modoVista);
+    // Ahora busca la alerta usando el MODO y la FECHA EXACTA
+    const erroresGuardados = localStorage.getItem(`rutasErrores_${this.modoVista}_${this.filtroFecha}`);
     if (erroresGuardados) {
       this.clientesNoEncontrados = JSON.parse(erroresGuardados);
     } else {
@@ -155,7 +178,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
   cerrarPanelErrores() {
     this.clientesNoEncontrados = [];
-    localStorage.removeItem('rutasErroresClientes_' + this.modoVista);
+    localStorage.removeItem(`rutasErrores_${this.modoVista}_${this.filtroFecha}`);
   }
 
   async cargarDatosBase() {
@@ -205,33 +228,31 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   onSearchChange() {
     this.paginaPendientes = 1;
     this.paginaHistorial = 1;
+    this.cargarErroresGuardados(); // <-- MAGIA: Actualiza la alerta roja al cambiar la fecha
   }
 
   cumpleFiltros(r: any): boolean {
     const matchPlaca = !this.filtroPlaca || r.placa.toLowerCase().includes(this.filtroPlaca.toLowerCase());
     const nombreCliente = r.clientes?.razon_social || '';
     const matchCliente = !this.filtroCliente || nombreCliente.toLowerCase().includes(this.filtroCliente.toLowerCase());
-    return matchPlaca && matchCliente;
+    const matchFecha = r.fecha_despacho === this.filtroFecha; 
+    return matchPlaca && matchCliente && matchFecha;
   }
 
   get rutasPendientes() { 
-    // 1. Primero filtramos las rutas según la pestaña y la barra de búsqueda
     const filtradas = this.rutas.filter(r => {
       const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
       const coincideModo = this.modoVista === origen;
       return coincideModo && (r.estado === 'PENDIENTE' || r.estado === 'EN_RUTA' || r.estado === 'EN_PROCESO') && this.cumpleFiltros(r);
     }); 
 
-    // 2. Luego aplicamos el Ordenador Inteligente (Igual que el operador)
     return filtradas.sort((a, b) => {
       const avanceA = (a.v05||0) + (a.v10||0) + (a.v15||0) + (a.v45||0) + (a.m05||0) + (a.m10||0) + (a.m15||0) + (a.m45||0);
       const avanceB = (b.v05||0) + (b.v10||0) + (b.v15||0) + (b.v45||0) + (b.m05||0) + (b.m10||0) + (b.m15||0) + (b.m45||0);
 
-      // Los que tienen avance > 0 suben a la cima automáticamente
       if (avanceA > 0 && avanceB === 0) return -1;
       if (avanceB > 0 && avanceA === 0) return 1;
 
-      // Si están empatados, se ordenan alfabéticamente
       const clienteA = a.clientes?.razon_social || '';
       const clienteB = b.clientes?.razon_social || '';
       return clienteA.localeCompare(clienteB);
@@ -338,6 +359,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(await file.arrayBuffer());
       
+      // PRIORIDAD PARA LA HOJA IMPRIMIR
       const worksheet = workbook.getWorksheet('Imprimir') || workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
       const sheetInicial = workbook.getWorksheet('PROGRAMACION INICIAL'); 
 
@@ -441,9 +463,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       const nuevasRutas: any[] = [];
       const noEncontrados = new Set<string>();
       
-      let fechaProg = new Date().toISOString().split('T')[0];
-      const celdaFechaA = worksheet.getCell('A2').value;
-      if (celdaFechaA instanceof Date) fechaProg = celdaFechaA.toISOString().split('T')[0];
+      const fechaProg = this.fechaImportacion; // 🔥 FUERZA LA FECHA ELEGIDA EN EL MODAL
 
       if (this.modoVista === 'INDUSTRIAS') {
         let cPlaca = 0, cTrans = 0, cCliente = 0, cCant = 0, cTipo = 0, cObs = 0, cEntrega = 0;
@@ -552,10 +572,17 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
               if (colNum < colLimite) {
                   const valLimpio = val.replace(/\s+/g, '');
+                  // 1. Detección Clásica
                   if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.push(colNum);
                   if (valLimpio.includes('10KG')) cols10.push(colNum);
                   if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.push(colNum);
                   if (valLimpio.includes('45KG')) cols45.push(colNum);
+                  
+                  // 2. Detección por Códigos SAP de Material (Hoja Imprimir)
+                  if (['41000102', '41000103', '41000101'].includes(valLimpio)) cols05.push(colNum);
+                  if (['41000104', '41000105', '41000110', '41000111', '41000108', '41000109'].includes(valLimpio)) cols10.push(colNum);
+                  if (['41000115', '41000113', '41000114', '41000116'].includes(valLimpio)) cols15.push(colNum);
+                  if (['41000119', '41000121', '41000106', '41000107'].includes(valLimpio)) cols45.push(colNum);
               }
             });
           }
@@ -655,10 +682,17 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       }
 
       if (noEncontrados.size > 0) {
-        this.clientesNoEncontrados = Array.from(noEncontrados);
-        localStorage.setItem('rutasErroresClientes_' + this.modoVista, JSON.stringify(this.clientesNoEncontrados));
+        const arrayErrores = Array.from(noEncontrados);
+        localStorage.setItem(`rutasErrores_${this.modoVista}_${fechaProg}`, JSON.stringify(arrayErrores));
+        // Si estás mirando el mismo día que acabas de subir, muéstralo de inmediato
+        if (this.filtroFecha === fechaProg) {
+           this.clientesNoEncontrados = arrayErrores;
+        }
       } else {
-        this.cerrarPanelErrores(); 
+        localStorage.removeItem(`rutasErrores_${this.modoVista}_${fechaProg}`);
+        if (this.filtroFecha === fechaProg) {
+           this.clientesNoEncontrados = []; 
+        }
       }
 
       const rutasNuevasFiltradas = nuevasRutas.filter(nr => {
@@ -758,13 +792,18 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     try {
       const rutasABorrar = this.rutas.filter(r => {
         const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
-        return origen === this.modoVista;
+        
+        // 🔥 EL CANDADO SALVAVIDAS: Solo selecciona las de esta pestaña Y de la fecha que estás mirando
+        const coincideModo = origen === this.modoVista;
+        const coincideFecha = r.fecha_despacho === this.filtroFecha;
+        
+        return coincideModo && coincideFecha;
       });
 
       const ids = rutasABorrar.map(r => r.id);
 
       if (ids.length === 0) {
-        this.toast.showWarning(`No hay rutas de ${this.modoVista} para eliminar.`);
+        this.toast.showWarning(`No hay rutas de ${this.modoVista} el ${this.filtroFecha} para eliminar.`);
         this.cancelDeleteAll();
         this.isLoading = false;
         return;
@@ -781,7 +820,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       this.paginaPendientes = 1;
       this.paginaHistorial = 1;
       
-      this.toast.showSuccess(`Todas las rutas de ${this.modoVista} fueron eliminadas.`);
+      this.toast.showSuccess(`Se eliminaron las rutas de ${this.modoVista} del día ${this.filtroFecha}.`);
       this.cancelDeleteAll();
     } catch (error: any) {
       this.toast.showError('Error al vaciar DB: ' + error.message);

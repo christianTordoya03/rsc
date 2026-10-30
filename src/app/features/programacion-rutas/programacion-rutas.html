@@ -32,7 +32,8 @@
         </ng-container>
 
         <input type="file" #fileInput accept=".xlsx, .xls" class="hidden" (change)="importarExcel($event)">
-        <button (click)="fileInput.click()" 
+        <!-- SOLO CAMBIA ESTE CLICK PARA LLAMAR AL MODAL -->
+        <button (click)="abrirModalFechaImportacion()" 
           class="flex-1 sm:flex-none text-white p-2.5 sm:px-4 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
           [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'">
           <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -69,7 +70,11 @@
     </div>
   </div>
 
+  <!-- BARRA DE BÚSQUEDA Y FILTRO DE FECHA -->
   <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 relative z-0">
+    <div class="sm:w-48 relative shrink-0">
+      <input type="date" [(ngModel)]="filtroFecha" (ngModelChange)="onSearchChange()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all text-[#4F46E5] font-bold shadow-sm">
+    </div>
     <div class="flex-1 relative">
       <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
       <input type="text" [(ngModel)]="filtroCliente" (ngModelChange)="onSearchChange()" placeholder="Filtrar por Cliente..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all">
@@ -446,4 +451,26 @@
     (confirm)="ejecutarAccionConfirmada()" 
     (cancel)="cerrarConfirmacion()">
   </app-confirm-modal>
+</div>
+
+<!-- MODAL: ELEGIR FECHA ANTES DE IMPORTAR EXCEL -->
+<div *ngIf="showModalFechaImportacion" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
+    <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between">
+      <h2 class="text-white text-lg font-bold tracking-wider">Fecha de Programación</h2>
+      <button (click)="cerrarModalFechaImportacion()" class="text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-6 bg-slate-50 text-center">
+      <p class="text-sm text-slate-500 mb-4">¿A qué día de trabajo corresponde el Excel que vas a subir?</p>
+      
+      <input type="date" [(ngModel)]="fechaImportacion" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#4F46E5] outline-none text-[#4F46E5] font-black text-center text-lg mb-6 shadow-sm">
+      
+      <button (click)="continuarImportacion()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        Continuar y Subir Excel
+      </button>
+    </div>
+  </div>
 </div>

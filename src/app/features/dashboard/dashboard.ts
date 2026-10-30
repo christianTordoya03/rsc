@@ -28,7 +28,7 @@ export class Dashboard implements OnInit, OnDestroy {
   despachosFiltrados: any[] = [];
   
   // Catálogos para filtros
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'B7M-872'];
   operadores: any[] = [];
   clientes: any[] = [];
 
