@@ -28,7 +28,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
   rutaActual: any = null;
   archivoEvidencia: File | null = null;
 
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872', 'BTB-817'];
 
   checkinForm: FormGroup;
   checkoutForm: FormGroup;
@@ -207,7 +207,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
     }
 
     const { data, error } = await this.supabase.despachos
-      .select(`*, clientes(razon_social, direccion)`)
+      .select(`*, clientes(razon_social, direccion), entregas_parciales(*)`)
       .eq('placa', this.datosJornada.placa)
       .eq('fecha_despacho', this.datosJornada.fecha) 
       .neq('estado', 'COMPLETADO') 
@@ -278,7 +278,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
 
   async registrarDespacho() {
     if (this.despachoForm.invalid) return this.despachoForm.markAllAsTouched();
-    if (this.tieneMerma && !this.archivoEvidencia) return this.toast.showWarning('Adjunte foto de merma obligatoria');
+    // if (this.tieneMerma && !this.archivoEvidencia) return this.toast.showWarning('Adjunte foto de merma obligatoria');
 
     this.isLoading = true;
     const v = this.despachoForm.value;
@@ -371,5 +371,38 @@ export class OperadorComponent implements OnInit, OnDestroy {
       const clienteB = b.clientes?.razon_social || '';
       return clienteA.localeCompare(clienteB);
     });
+  }
+
+  async subirEvidenciaTardia(event: any, entregaId: string, despachoId: string) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    this.isLoading = true;
+    this.toast.showInfo('Subiendo foto desde galería...');
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${new Date().getTime()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      
+      const { error: uploadError } = await this.supabase.storage.from('evidencias').upload(`mermas/${fileName}`, file);
+      if (uploadError) throw uploadError;
+      
+      const { data: publicUrlData } = this.supabase.storage.from('evidencias').getPublicUrl(`mermas/${fileName}`);
+      
+      // Actualizamos la entrega individual con la nueva foto
+      const { error: updateError } = await this.supabase.from('entregas_parciales')
+        .update({ foto_merma_url: publicUrlData.publicUrl })
+        .eq('id', entregaId);
+        
+      if (updateError) throw updateError;
+      
+      this.toast.showSuccess('Evidencia subida correctamente');
+      await this.cargarRutasReales(); // Recargamos para actualizar la vista
+    } catch (error: any) {
+      this.toast.showError('Error al subir imagen: ' + error.message);
+    } finally {
+      this.isLoading = false;
+      event.target.value = ''; // Limpiamos el input
+    }
   }
 }

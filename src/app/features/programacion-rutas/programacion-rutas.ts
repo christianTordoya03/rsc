@@ -35,7 +35,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   
   placas = [
     'BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 
-    'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'B7M-872'
+    'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'B7M-872', 'BTB-817'
   ];
 
   rutaForm: FormGroup;

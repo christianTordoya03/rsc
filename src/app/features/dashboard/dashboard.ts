@@ -28,12 +28,12 @@ export class Dashboard implements OnInit, OnDestroy {
   despachosFiltrados: any[] = [];
   
   // Catálogos para filtros
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'B7M-872'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'B7M-872', 'BTB-817'];
   operadores: any[] = [];
   clientes: any[] = [];
 
   // Modelos de Filtro
-  filtroPlaca = '';
+  filtroPlaca: string[] = [];
   filtroOperador = '';
   filtroCliente = '';
   fechaInicio = '';
@@ -114,7 +114,9 @@ export class Dashboard implements OnInit, OnDestroy {
   aplicarFiltros() {
     this.despachosFiltrados = this.despachosCrudos.filter(d => {
       let pasa = true;
-      if (this.filtroPlaca && d.placa !== this.filtroPlaca) pasa = false;
+      // SI HAY PLACAS SELECCIONADAS Y LA PLACA DEL DESPACHO NO ESTÁ EN EL ARREGLO, NO PASA
+      if (this.filtroPlaca.length > 0 && !this.filtroPlaca.includes(d.placa)) pasa = false;
+      
       if (this.filtroOperador && d.operador_id !== this.filtroOperador) pasa = false;
       if (this.filtroCliente && d.cliente_id !== this.filtroCliente) pasa = false;
       if (this.fechaInicio && d.fecha_despacho < this.fechaInicio) pasa = false;
@@ -243,5 +245,15 @@ export class Dashboard implements OnInit, OnDestroy {
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Consolidado_Gerencial_${new Date().getTime()}.xlsx`);
+  }
+
+  togglePlaca(placa: string) {
+    const index = this.filtroPlaca.indexOf(placa);
+    if (index > -1) {
+      this.filtroPlaca.splice(index, 1); // Si ya está, la quitamos
+    } else {
+      this.filtroPlaca.push(placa); // Si no está, la agregamos
+    }
+    this.aplicarFiltros();
   }
 }
