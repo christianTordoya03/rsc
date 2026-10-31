@@ -26,7 +26,24 @@
     </div>
   </header>
 
-  <div class="p-4 space-y-4 mt-2">
+  <!-- ================= TABS DE NAVEGACIÓN ================= -->
+  <div class="px-4 mt-5 flex gap-2">
+    <button (click)="vistaActiva = 'DESPACHOS'" 
+            [ngClass]="vistaActiva === 'DESPACHOS' ? 'bg-[#1E1B4B] text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'"
+            class="flex-1 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+      Mis Despachos
+    </button>
+    <button (click)="vistaActiva = 'COMBUSTIBLE'"
+            [ngClass]="vistaActiva === 'COMBUSTIBLE' ? 'bg-[#1E1B4B] text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'"
+            class="flex-1 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      Combustible / Km
+    </button>
+  </div>
+
+  <!-- ================= VISTA 1: DESPACHOS ================= -->
+  <div *ngIf="vistaActiva === 'DESPACHOS'" class="p-4 space-y-4 mt-2">
     <h2 class="text-slate-500 font-bold text-sm uppercase px-2 flex justify-between">
       <span>Mis Despachos Hoy</span>
       <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">{{rutasAsignadas.length}}</span>
@@ -128,6 +145,61 @@
           </ng-container>
         </ng-container>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= VISTA 2: ADELANTO DE COMBUSTIBLE / KILOMETRAJE ================= -->
+  <div *ngIf="vistaActiva === 'COMBUSTIBLE'" class="p-4 space-y-4 mt-2">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+      <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
+        <div class="bg-indigo-100 p-2 rounded-lg text-[#4F46E5]">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+          <h2 class="text-slate-800 font-black text-lg leading-tight">Gastos y Odómetro</h2>
+          <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Adelanta tu registro en ruta</p>
+        </div>
+      </div>
+
+      <form [formGroup]="checkoutForm" class="space-y-4">
+        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center mb-2 flex justify-between items-center px-4">
+          <p class="text-xs font-bold text-indigo-400">KM INICIAL</p>
+          <p class="text-lg font-black text-indigo-700">{{ datosJornada?.kmInicial }}</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">ODÓMETRO / KM ACTUAL</label>
+          <input type="number" formControlName="kmFinal" placeholder="Ej. 145120" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center text-xl tracking-wider focus:ring-2 focus:ring-[#4F46E5]">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">GALONES DIESEL</label>
+            <input type="number" formControlName="galones" placeholder="0" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">MONTO GRIFO (S/)</label>
+            <input type="number" formControlName="montoCombustible" placeholder="0.00" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-orange-500 mb-1">GASTO EN PEAJES (S/)</label>
+          <input type="number" formControlName="peajes" placeholder="0.00" class="w-full p-3 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-700 text-center focus:ring-2 focus:ring-orange-400">
+        </div>
+
+        <button type="button" (click)="notificarProgreso()" class="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold py-3.5 rounded-xl transition-colors flex justify-center items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          Guardar Adelanto en Memoria
+        </button>
+      </form>
+    </div>
+    
+    <div class="bg-amber-50 rounded-xl p-4 border border-amber-200">
+       <p class="text-[11px] leading-relaxed text-amber-700 font-bold flex items-start gap-2">
+         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+         Llenar estos datos NO cierra tu jornada. Cuando termines todo tu día de reparto, debes presionar el botón rojo "Fin Turno" arriba a la derecha.
+       </p>
     </div>
   </div>
 </div>

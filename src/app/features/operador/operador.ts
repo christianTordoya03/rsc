@@ -24,11 +24,14 @@ export class OperadorComponent implements OnInit, OnDestroy {
   datosJornada: any = null;
   userId: string = '';
 
+  // Control de Vistas
+  vistaActiva: 'DESPACHOS' | 'COMBUSTIBLE' = 'DESPACHOS';
+
   rutasAsignadas: any[] = [];
   rutaActual: any = null;
   archivoEvidencia: File | null = null;
 
-  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872', 'BTB-817', 'AUH-916', 'F4D-707'];
+  placas = ['BBU-840', 'ACK-826', 'BHH-935', 'BBT-751', 'F4D-855', 'AYJ-784', 'BAN-786', 'B0L-756', 'F4B-804', 'BEL-713', 'F6Y-818', 'BSY-931', 'AUH-927', 'F6Z-867', 'BHI-940', 'B7M-872', 'BTB-817', 'AUH-916', 'F4D-707', 'CAE-701'];
 
   checkinForm: FormGroup;
   checkoutForm: FormGroup;
@@ -36,6 +39,12 @@ export class OperadorComponent implements OnInit, OnDestroy {
 
   // Motor de actualización en tiempo real
   private autoRefreshSub: any;
+
+  private obtenerFechaLocal() {
+    const fecha = new Date();
+    fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
+    return fecha.toISOString().split('T')[0];
+  }
 
   constructor(
     private fb: FormBuilder,
@@ -127,7 +136,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     const placaSeleccionada = this.checkinForm.value.placa;
     const kmInicial = this.checkinForm.value.kilometraje;
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = this.obtenerFechaLocal();
 
     try {
       const { error: updateError } = await this.supabase.despachos
@@ -186,6 +195,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
       this.checkoutForm.reset();
       this.checkinForm.reset();
       this.rutasAsignadas = [];
+      this.vistaActiva = 'DESPACHOS';
       this.toast.showSuccess('Jornada finalizada correctamente');
     } catch (error) {
       this.toast.showError('Error al cerrar jornada');
@@ -197,7 +207,7 @@ export class OperadorComponent implements OnInit, OnDestroy {
   async cargarRutasReales() {
     if (!this.datosJornada?.placa) return;
 
-    const hoyReal = new Date().toISOString().split('T')[0];
+    const hoyReal = this.obtenerFechaLocal();
 
     if (this.datosJornada.fecha !== hoyReal) {
       this.rutasAsignadas = []; // Vaciamos la pantalla a la fuerza
@@ -404,5 +414,9 @@ export class OperadorComponent implements OnInit, OnDestroy {
       this.isLoading = false;
       event.target.value = ''; // Limpiamos el input
     }
+  }
+
+  notificarProgreso() {
+    this.toast.showSuccess('Progreso guardado. No olvides pulsar el botón rojo "Fin Turno" al terminar tu día.');
   }
 }

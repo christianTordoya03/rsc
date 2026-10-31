@@ -32,7 +32,6 @@ export class OperacionNocturnaComponent implements OnInit {
   recordToDelete: string | null = null;
   registroDetalleActual: any = null;
   
-  // Función para obtener la fecha de Lima (GMT-5) sin desfases
   private obtenerFechaLocal() {
     const fecha = new Date();
     fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
@@ -42,20 +41,18 @@ export class OperacionNocturnaComponent implements OnInit {
   filtroMainInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   filtroMainFin = this.obtenerFechaLocal();
 
-  // Variables del Dashboard Principal
   dashTotalTurnos = 0;
   dashTotalSalidas = 0;
   dashTotalRetornos = 0;
   dashTotalKg = 0;
-  dashDescargasVaciosQty = 0; // NUEVO: Unidades Vacías
-  dashDescargasLlenosKg = 0;  // NUEVO: Kilos Llenos
+  dashDescargasVaciosQty = 0; 
+  dashDescargasLlenosKg = 0;  
   dashDataPlacas: any[] = []; 
 
   reporteForm!: FormGroup;
   
   filtroAsistenciaInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   filtroAsistenciaFin = this.obtenerFechaLocal();
-  
   filtroEmpleado = '';
   filtroEstado = 'Todos';
   asistenciaConsolidada: any[] = [];
@@ -64,7 +61,7 @@ export class OperacionNocturnaComponent implements OnInit {
     'YAHUANA CORDOVA YAMPIER DAVID / DNI: 62727297',
     'RÍOS CUMARI ELTON / DNI: 76559442',
     'LOPEZ CASTILLO ELVES ABEL / DNI: 74211559',
-    'PINO MENENDEZ MARIANO ANDERSON'
+    'ROMAN PAZ VICTOR RODRIGO STEVE / DNI: 76321404'
   ];
   estadosAsistencia = ['Asistió', 'Falta', 'Tardanza', 'Permiso'];
   unidades = [
@@ -74,11 +71,10 @@ export class OperacionNocturnaComponent implements OnInit {
     { placa: 'BAN-786', capacidad: 2500 }, { placa: 'BBT-751', capacidad: 3500 },
     { placa: 'BBU-840', capacidad: 3500 }, { placa: 'F6Y-818', capacidad: 1600 },
     { placa: 'BEL-713', capacidad: 8250 }, { placa: 'BHH-935', capacidad: 2500 },
-
-    { placa: 'BSY-931', capacidad: 2500 }, { placa: 'AUH-927', capacidad: 2500 },
-    { placa: 'F6Z-867', capacidad: 1600 }, { placa: 'BHI-940', capacidad: 2500 },
-    { placa: 'BTB-817', capacidad: 2500 }, { placa: 'AUH-916', capacidad: 2500 },
-    { placa: 'F4D-707', capacidad: 1750 }
+    { placa: 'BSY-931', capacidad: 3500 }, { placa: 'AUH-927', capacidad: 3500 },
+    { placa: 'F6Z-867', capacidad: 3500 }, { placa: 'BHI-940', capacidad: 3500 },
+    { placa: 'BTB-817', capacidad: 3500 }, { placa: 'AUH-916', capacidad: 3500 },
+    { placa: 'F4D-707', capacidad: 3500 }
   ];
   estadosCilindros = ['Llenos', 'Vacíos'];
 
@@ -145,10 +141,13 @@ export class OperacionNocturnaComponent implements OnInit {
   }
   eliminarCarga(i: number) { this.cargas.removeAt(i); }
 
+  // NUEVO FORMATO DE DESCARGA: Agrupa Vacíos y Llenos en la misma placa
   agregarDescarga(data?: any) {
     this.descargas.push(this.fb.group({
-      placa: [data?.placa || '', Validators.required], estado: [data?.estado || 'Vacíos', Validators.required],
-      p05: [data?.p05 || 0], p10: [data?.p10 || 0], p15: [data?.p15 || 0], p45: [data?.p45 || 0], comentarios: [data?.comentarios || '']
+      placa: [data?.placa || '', Validators.required],
+      v_p05: [data?.v_p05 || 0], v_p10: [data?.v_p10 || 0], v_p15: [data?.v_p15 || 0], v_p45: [data?.v_p45 || 0],
+      ll_p05: [data?.ll_p05 || 0], ll_p10: [data?.ll_p10 || 0], ll_p15: [data?.ll_p15 || 0], ll_p45: [data?.ll_p45 || 0],
+      comentarios: [data?.comentarios || '']
     }));
   }
   eliminarDescarga(i: number) { this.descargas.removeAt(i); }
@@ -200,8 +199,21 @@ export class OperacionNocturnaComponent implements OnInit {
     cargasData.forEach((c: any) => this.agregarCarga(c));
     if (this.cargas.length === 0) this.agregarCarga();
 
+    // MIGRACIÓN AL VUELO: Compatibilidad con registros antiguos y nuevos
     const descargasData = reg.datos_formulario?.descargas || [];
-    descargasData.forEach((d: any) => this.agregarDescarga(d));
+    if (descargasData.length > 0 && descargasData[0].estado) {
+      const agrupado = new Map<string, any>();
+      descargasData.forEach((d: any) => {
+        if (!agrupado.has(d.placa)) agrupado.set(d.placa, { placa: d.placa, comentarios: d.comentarios });
+        const g = agrupado.get(d.placa);
+        if (d.estado === 'Vacíos') { g.v_p05 = d.p05; g.v_p10 = d.p10; g.v_p15 = d.p15; g.v_p45 = d.p45; }
+        if (d.estado === 'Llenos') { g.ll_p05 = d.p05; g.ll_p10 = d.p10; g.ll_p15 = d.p15; g.ll_p45 = d.p45; }
+        if (d.comentarios) g.comentarios = d.comentarios;
+      });
+      Array.from(agrupado.values()).forEach(g => this.agregarDescarga(g));
+    } else {
+      descargasData.forEach((d: any) => this.agregarDescarga(d));
+    }
 
     const colabsData = reg.datos_formulario?.colaboradores || [];
     colabsData.forEach((col: any) => this.agregarColaborador(col));
@@ -211,7 +223,32 @@ export class OperacionNocturnaComponent implements OnInit {
 
   closeForm() { this.showForm = false; }
 
-  verDetalle(reg: any) { this.registroDetalleActual = reg; this.showDetalleModal = true; }
+  verDetalle(reg: any) { 
+    this.registroDetalleActual = JSON.parse(JSON.stringify(reg));
+    
+    // Normalizar descargas para que el HTML del Modal no cambie
+    if (this.registroDetalleActual.datos_formulario?.descargas) {
+      const normalized: any[] = [];
+      this.registroDetalleActual.datos_formulario.descargas.forEach((d: any) => {
+        if (d.estado) {
+          normalized.push(d); 
+        } else {
+          const hasV = (d.v_p05 + d.v_p10 + d.v_p15 + d.v_p45) > 0;
+          const hasL = (d.ll_p05 + d.ll_p10 + d.ll_p15 + d.ll_p45) > 0;
+          
+          if (hasV || (!hasV && !hasL)) {
+            normalized.push({ placa: d.placa, estado: 'Vacíos', p05: d.v_p05, p10: d.v_p10, p15: d.v_p15, p45: d.v_p45, comentarios: d.comentarios });
+          }
+          if (hasL) {
+            normalized.push({ placa: d.placa, estado: 'Llenos', p05: d.ll_p05, p10: d.ll_p10, p15: d.ll_p15, p45: d.ll_p45, comentarios: hasV ? '' : d.comentarios });
+          }
+        }
+      });
+      this.registroDetalleActual.datos_formulario.descargas = normalized;
+    }
+
+    this.showDetalleModal = true; 
+  }
   cerrarDetalle() { this.showDetalleModal = false; this.registroDetalleActual = null; }
 
   async cargarHistorial() {
@@ -242,14 +279,12 @@ export class OperacionNocturnaComponent implements OnInit {
     this.dashTotalRetornos = 0;
     this.dashTotalKg = 0;
     
-    // Reset de nuevas variables
     this.dashDescargasVaciosQty = 0;
     this.dashDescargasLlenosKg = 0;
 
     const placasMap = new Map<string, { kg: number, cap: number }>();
 
     this.registros.forEach(r => {
-      // CARGAS
       if (r.datos_formulario?.cargas) {
         this.dashTotalSalidas += r.datos_formulario.cargas.length;
         r.datos_formulario.cargas.forEach((c: any) => {
@@ -264,23 +299,26 @@ export class OperacionNocturnaComponent implements OnInit {
         });
       }
       
-      // DESCARGAS (Lógica separada por Estado)
       if (r.datos_formulario?.descargas) {
-        this.dashTotalRetornos += r.datos_formulario.descargas.length;
+        const placasRetorno = new Set();
+        
         r.datos_formulario.descargas.forEach((d: any) => {
-          const q05 = Number(d.p05 || 0);
-          const q10 = Number(d.p10 || 0);
-          const q15 = Number(d.p15 || 0);
-          const q45 = Number(d.p45 || 0);
+          placasRetorno.add(d.placa);
           
-          if (d.estado === 'Vacíos') {
-             // Solo suma las unidades
-             this.dashDescargasVaciosQty += (q05 + q10 + q15 + q45);
-          } else if (d.estado === 'Llenos') {
-             // Suma los kilos
-             this.dashDescargasLlenosKg += (q05 * 5) + (q10 * 10) + (q15 * 15) + (q45 * 45);
+          if (d.estado) { // Antiguo
+             const q05 = Number(d.p05 || 0); const q10 = Number(d.p10 || 0); const q15 = Number(d.p15 || 0); const q45 = Number(d.p45 || 0);
+             if (d.estado === 'Vacíos') this.dashDescargasVaciosQty += (q05 + q10 + q15 + q45);
+             if (d.estado === 'Llenos') this.dashDescargasLlenosKg += (q05 * 5) + (q10 * 10) + (q15 * 15) + (q45 * 45);
+          } else { // Nuevo Formato Agrupado
+             const v05 = Number(d.v_p05 || 0); const v10 = Number(d.v_p10 || 0); const v15 = Number(d.v_p15 || 0); const v45 = Number(d.v_p45 || 0);
+             const l05 = Number(d.ll_p05 || 0); const l10 = Number(d.ll_p10 || 0); const l15 = Number(d.ll_p15 || 0); const l45 = Number(d.ll_p45 || 0);
+             
+             this.dashDescargasVaciosQty += (v05 + v10 + v15 + v45);
+             this.dashDescargasLlenosKg += (l05 * 5) + (l10 * 10) + (l15 * 15) + (l45 * 45);
           }
         });
+        
+        this.dashTotalRetornos += placasRetorno.size;
       }
     });
 
@@ -423,7 +461,6 @@ export class OperacionNocturnaComponent implements OnInit {
 
     try {
       const workbook = new ExcelJS.Workbook();
-      
       const wsDash = workbook.addWorksheet('Dashboard Resumen', { views: [{ showGridLines: false }] });
       
       wsDash.getColumn('A').width = 3;  
@@ -519,10 +556,22 @@ export class OperacionNocturnaComponent implements OnInit {
       this.registros.forEach((r: any) => {
         if (r.datos_formulario?.descargas) {
           r.datos_formulario.descargas.forEach((d: any) => {
-            wsDescargas.addRow({
-              fecha: r.fecha, placa: d.placa, estado: d.estado,
-              p05: d.p05, p10: d.p10, p15: d.p15, p45: d.p45, comentarios: d.comentarios
-            });
+            if (d.estado) { // Antiguo
+              wsDescargas.addRow({
+                fecha: r.fecha, placa: d.placa, estado: d.estado,
+                p05: d.p05, p10: d.p10, p15: d.p15, p45: d.p45, comentarios: d.comentarios
+              });
+            } else { // Nuevo
+              const hasV = (d.v_p05 + d.v_p10 + d.v_p15 + d.v_p45) > 0;
+              const hasL = (d.ll_p05 + d.ll_p10 + d.ll_p15 + d.ll_p45) > 0;
+              
+              if (hasV || (!hasV && !hasL)) {
+                wsDescargas.addRow({ fecha: r.fecha, placa: d.placa, estado: 'Vacíos', p05: d.v_p05, p10: d.v_p10, p15: d.v_p15, p45: d.v_p45, comentarios: d.comentarios });
+              }
+              if (hasL) {
+                wsDescargas.addRow({ fecha: r.fecha, placa: d.placa, estado: 'Llenos', p05: d.ll_p05, p10: d.ll_p10, p15: d.ll_p15, p45: d.ll_p45, comentarios: hasV ? '' : d.comentarios });
+              }
+            }
           });
         }
       });
