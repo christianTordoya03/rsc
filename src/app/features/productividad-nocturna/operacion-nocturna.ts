@@ -32,8 +32,15 @@ export class OperacionNocturnaComponent implements OnInit {
   recordToDelete: string | null = null;
   registroDetalleActual: any = null;
   
+  // Función para obtener la fecha de Lima (GMT-5) sin desfases
+  private obtenerFechaLocal() {
+    const fecha = new Date();
+    fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
+    return fecha.toISOString().split('T')[0];
+  }
+
   filtroMainInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  filtroMainFin = new Date().toISOString().split('T')[0];
+  filtroMainFin = this.obtenerFechaLocal();
 
   // Variables del Dashboard Principal
   dashTotalTurnos = 0;
@@ -47,7 +54,8 @@ export class OperacionNocturnaComponent implements OnInit {
   reporteForm!: FormGroup;
   
   filtroAsistenciaInicio = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-  filtroAsistenciaFin = new Date().toISOString().split('T')[0];
+  filtroAsistenciaFin = this.obtenerFechaLocal();
+  
   filtroEmpleado = '';
   filtroEstado = 'Todos';
   asistenciaConsolidada: any[] = [];
@@ -67,10 +75,10 @@ export class OperacionNocturnaComponent implements OnInit {
     { placa: 'BBU-840', capacidad: 3500 }, { placa: 'F6Y-818', capacidad: 1600 },
     { placa: 'BEL-713', capacidad: 8250 }, { placa: 'BHH-935', capacidad: 2500 },
 
-    { placa: 'BSY-931', capacidad: 3500 }, { placa: 'AUH-927', capacidad: 3500 },
-    { placa: 'F6Z-867', capacidad: 3500 }, { placa: 'BHI-940', capacidad: 3500 },
-    { placa: 'BTB-817', capacidad: 3500 }, { placa: 'AUH-916', capacidad: 3500 },
-    { placa: 'F4D-707', capacidad: 3500 }
+    { placa: 'BSY-931', capacidad: 2500 }, { placa: 'AUH-927', capacidad: 2500 },
+    { placa: 'F6Z-867', capacidad: 1600 }, { placa: 'BHI-940', capacidad: 2500 },
+    { placa: 'BTB-817', capacidad: 2500 }, { placa: 'AUH-916', capacidad: 2500 },
+    { placa: 'F4D-707', capacidad: 1750 }
   ];
   estadosCilindros = ['Llenos', 'Vacíos'];
 
@@ -93,7 +101,7 @@ export class OperacionNocturnaComponent implements OnInit {
 
   inicializarFormulario() {
     this.reporteForm = this.fb.group({
-      fecha: [new Date().toISOString().split('T')[0], Validators.required],
+      fecha: [this.obtenerFechaLocal(), Validators.required],
       responsable: [{ value: this.nombreResponsable, disabled: true }],
       cargas: this.fb.array([]),
       descargas: this.fb.array([]),

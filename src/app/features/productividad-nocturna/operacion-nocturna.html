@@ -49,7 +49,7 @@
           <p class="text-4xl font-black text-slate-800">{{ dashTotalSalidas }}</p>
         </div>
         <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
-          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+          <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
         </div>
       </div>
 
@@ -415,16 +415,17 @@
           <div *ngFor="let col of colaboradores.controls; let i=index" [formGroupName]="i"
             class="flex flex-col sm:flex-row gap-3 mb-4 bg-white shadow-sm p-4 rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors items-start sm:items-end">
             
+            <!-- ====== CORRECCIÓN: SELECTOR NATIVO PARA MÓVILES ====== -->
             <div class="w-full sm:flex-[4]">
               <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Colaborador / DNI <span class="text-red-500">*</span></label>
-              <input formControlName="nombre" type="text" list="lista-empleados"
+              <select formControlName="nombre"
                 class="w-full rounded-lg text-sm focus:ring-[#4F46E5] transition-colors"
-                [ngClass]="col.get('nombre')?.invalid && col.get('nombre')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300 bg-slate-50'"
-                placeholder="Escribe o selecciona...">
-              <datalist id="lista-empleados">
-                <option *ngFor="let emp of empleadosDB" [value]="emp"></option>
-              </datalist>
+                [ngClass]="col.get('nombre')?.invalid && col.get('nombre')?.touched ? 'border-red-500 bg-red-50 ring-1 ring-red-500' : 'border-slate-300 bg-slate-50'">
+                <option value="" disabled selected>Seleccione colaborador...</option>
+                <option *ngFor="let emp of empleadosDB" [value]="emp">{{ emp }}</option>
+              </select>
             </div>
+            <!-- ======================================================= -->
 
             <div class="w-full sm:flex-[3]">
               <label class="text-[10px] uppercase font-bold text-slate-500 mb-1 block">Estado</label>
