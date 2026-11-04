@@ -1,4 +1,4 @@
-<div class="space-y-6 relative h-full">
+<div class="space-y-6 relative h-full overflow-x-hidden">
   
   <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
     <div>
@@ -6,33 +6,33 @@
       <p class="text-sm text-slate-500">Asignación masiva de unidades y carga por cliente</p>
     </div>
     
-    <div class="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto">
+    <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
       
-      <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm w-full md:w-auto shrink-0">
+      <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-sm w-full sm:w-auto flex-1 sm:flex-none">
         <button 
           (click)="cambiarModoVista('DISTRIBUIDORES')"
-          class="flex-1 md:flex-none px-6 py-2 rounded-md font-bold text-sm transition-all duration-300"
+          class="flex-1 px-4 sm:px-6 py-2 rounded-md font-bold text-xs sm:text-sm transition-all duration-300"
           [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-[#4F46E5] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'">
           DISTRIBUIDORES
         </button>
         <button 
           (click)="cambiarModoVista('INDUSTRIAS')"
-          class="flex-1 md:flex-none px-6 py-2 rounded-md font-bold text-sm transition-all duration-300"
+          class="flex-1 px-4 sm:px-6 py-2 rounded-md font-bold text-xs sm:text-sm transition-all duration-300"
           [ngClass]="modoVista === 'INDUSTRIAS' ? 'bg-[#4F46E5] text-white shadow-md' : 'text-slate-500 hover:text-slate-800'">
           INDUSTRIAS (B2B)
         </button>
       </div>
 
-      <div class="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
         <ng-container *ngIf="userRole === 'ADMIN'">
-          <button (click)="confirmDeleteAll()" class="bg-red-600 hover:bg-red-700 text-white p-2.5 sm:px-4 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2" title="Vaciar DB de Rutas">
+          <button (click)="confirmDeleteAll()" class="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white p-2.5 sm:px-4 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2" title="Vaciar DB de Rutas">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             <span class="hidden sm:inline">Vaciar</span>
           </button>
         </ng-container>
 
         <input type="file" #fileInput accept=".xlsx, .xls" class="hidden" (change)="importarExcel($event)">
-        <!-- SOLO CAMBIA ESTE CLICK PARA LLAMAR AL MODAL -->
+        
         <button (click)="abrirModalFechaImportacion()" 
           class="flex-1 sm:flex-none text-white p-2.5 sm:px-4 rounded-lg font-bold transition-colors shadow-sm flex items-center justify-center gap-2"
           [ngClass]="modoVista === 'DISTRIBUIDORES' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-teal-600 hover:bg-teal-700'">
@@ -41,7 +41,7 @@
           <span class="whitespace-nowrap sm:hidden">Cargar Excel</span>
         </button>
 
-        <button (click)="openForm()" class="bg-[#1E1B4B] hover:bg-slate-800 text-white p-2.5 sm:px-4 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-sm" title="Registro Manual">
+        <button (click)="openForm()" class="flex-1 sm:flex-none bg-[#1E1B4B] hover:bg-slate-800 text-white p-2.5 sm:px-4 rounded-lg font-bold flex items-center justify-center gap-2 transition shadow-sm" title="Registro Manual">
           <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
           <span class="hidden sm:inline">Manual</span>
         </button>
@@ -50,6 +50,7 @@
   </div>
 
   <div *ngIf="clientesNoEncontrados.length > 0" class="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm relative z-0 animate-fade-in">
+    <!-- ... (El contenido de alertas rojas se mantiene igual) ... -->
     <button (click)="cerrarPanelErrores()" class="absolute top-4 right-4 text-red-400 hover:text-red-600 transition-colors bg-white rounded-full p-1 shadow-sm border border-red-100" title="Cerrar panel y borrar memoria">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
     </button>
@@ -70,19 +71,36 @@
     </div>
   </div>
 
-  <!-- BARRA DE BÚSQUEDA Y FILTRO DE FECHA -->
-  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 relative z-0">
-    <div class="sm:w-48 relative shrink-0">
-      <input type="date" [(ngModel)]="filtroFecha" (ngModelChange)="onSearchChange()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all text-[#4F46E5] font-bold shadow-sm">
+  <!-- BARRA DE BÚSQUEDA Y FILTROS REESTRUCTURADA PARA RESPONSIVE -->
+  <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col xl:flex-row gap-4 relative z-0 items-start xl:items-center justify-between w-full">
+    
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full xl:w-auto flex-1">
+      <div class="relative">
+        <input type="date" [(ngModel)]="filtroFecha" (ngModelChange)="onSearchChange()" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all text-[#4F46E5] font-bold shadow-sm">
+      </div>
+      <div class="relative">
+        <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" [(ngModel)]="filtroCliente" (ngModelChange)="onSearchChange()" placeholder="Filtrar Cliente..." class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all">
+      </div>
+      <div class="relative">
+        <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+        <input type="text" [(ngModel)]="filtroPlaca" (ngModelChange)="onSearchChange()" placeholder="Filtrar Placa" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all uppercase">
+      </div>
     </div>
-    <div class="flex-1 relative">
-      <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-      <input type="text" [(ngModel)]="filtroCliente" (ngModelChange)="onSearchChange()" placeholder="Filtrar por Cliente..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all">
+
+    <div class="w-full xl:w-auto shrink-0 pt-2 xl:pt-0 border-t border-slate-100 xl:border-t-0 flex justify-end">
+      <label class="flex items-center cursor-pointer bg-indigo-50 border border-indigo-200 px-4 py-2.5 rounded-xl hover:bg-indigo-100 transition-colors w-full sm:w-auto justify-center">
+        <div class="relative">
+          <input type="checkbox" [(ngModel)]="filtroAtendiendo" class="sr-only" (change)="paginaPendientes = 1">
+          <div class="block bg-slate-300 w-10 h-6 rounded-full transition-colors" [ngClass]="{'bg-indigo-500': filtroAtendiendo}"></div>
+          <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" [ngClass]="{'transform translate-x-4': filtroAtendiendo}"></div>
+        </div>
+        <div class="ml-3 text-xs font-bold text-indigo-700 uppercase tracking-wide">
+          Ver Activos
+        </div>
+      </label>
     </div>
-    <div class="sm:w-64 relative">
-      <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
-      <input type="text" [(ngModel)]="filtroPlaca" (ngModelChange)="onSearchChange()" placeholder="Filtrar por Placa" class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none text-sm transition-all uppercase">
-    </div>
+
   </div>
 
   <div *ngIf="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex justify-center items-center rounded-xl">
@@ -96,14 +114,14 @@
     </h2>
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 flex flex-col">
       <div class="overflow-x-auto flex-1">
-        <table class="w-full text-left border-collapse whitespace-nowrap">
+        <table class="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
           <thead>
             <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
               <th class="p-4 font-semibold">Cliente / Destino</th>
               <th class="p-4 font-semibold">Asignación</th>
               <th class="p-4 font-semibold text-center">Carga Programada</th>
               <th class="p-4 font-semibold text-center w-48">Progreso de Entrega</th>
-              <th class="p-4 font-semibold text-center">Estado</th>
+              <th class="p-4 font-semibold text-center">Estado de Operador</th>
               <th class="p-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
@@ -144,11 +162,17 @@
               </td>
 
               <td class="p-4 text-center">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold" 
-                      [ngClass]="reg.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'">
-                  {{ reg.estado }}
+                <span class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-widest" 
+                      [ngClass]="{
+                        'bg-red-50 text-red-700 border border-red-200': reg.estado === 'PENDIENTE',
+                        'bg-purple-100 text-purple-700 border border-purple-200': reg.estado === 'PROXIMO',
+                        'bg-amber-100 text-amber-700 border border-amber-300': reg.estado === 'EN_PROCESO',
+                        'bg-blue-100 text-blue-700 border border-blue-200': reg.estado === 'EN_RUTA'
+                      }">
+                  {{ reg.estado === 'PENDIENTE' ? 'EN LISTA' : reg.estado === 'PROXIMO' ? 'PRÓXIMO A ATENDER' : reg.estado === 'EN_PROCESO' ? 'ATENDIENDO' : reg.estado }}
                 </span>
               </td>
+              
               <td class="p-4 text-right space-x-2">
                 <button (click)="verDetalleRuta(reg)" class="text-slate-400 hover:text-indigo-600 p-2 bg-slate-100 rounded transition-colors" title="Ver Entregas y Fotos">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
@@ -188,7 +212,7 @@
     </h2>
     <div class="bg-slate-50 rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
       <div class="overflow-x-auto flex-1">
-        <table class="w-full text-left border-collapse whitespace-nowrap">
+        <table class="w-full text-left border-collapse whitespace-nowrap min-w-[900px]">
           <thead>
             <tr class="bg-slate-100 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
               <th class="p-4 font-semibold">Cliente / Destino</th>
@@ -306,25 +330,53 @@
   </div>
 </div>
 
-<app-confirm-modal [isOpen]="showDeleteAllConfirm" title="⚠️ PELIGRO: VACIAR PROGRAMACIÓN" message="¿Estás seguro de vaciar todas las rutas? Esta acción es irreversible." confirmText="Sí, vaciar" (confirm)="executeDeleteAll()" (cancel)="cancelDeleteAll()"></app-confirm-modal>
+<div class="relative z-[999]">
+  <app-confirm-modal 
+    [isOpen]="confirmDialog.isOpen" 
+    [title]="confirmDialog.title" 
+    [message]="confirmDialog.message" 
+    [confirmText]="confirmDialog.confirmText" 
+    (confirm)="ejecutarAccionConfirmada()" 
+    (cancel)="cerrarConfirmacion()">
+  </app-confirm-modal>
+</div>
 
-<!-- Modal Ver Foto -->
+<div *ngIf="showModalFechaImportacion" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
+    <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between">
+      <h2 class="text-white text-lg font-bold tracking-wider">Fecha de Programación</h2>
+      <button (click)="cerrarModalFechaImportacion()" class="text-slate-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="p-6 bg-slate-50 text-center">
+      <p class="text-sm text-slate-500 mb-4">¿A qué día de trabajo corresponde el Excel que vas a subir?</p>
+      
+      <input type="date" [(ngModel)]="fechaImportacion" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#4F46E5] outline-none text-[#4F46E5] font-black text-center text-lg mb-6 shadow-sm">
+      
+      <button (click)="continuarImportacion()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        Continuar y Subir Excel
+      </button>
+    </div>
+  </div>
+</div>
+
 <div *ngIf="showFotoModal" class="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-lg w-full flex flex-col relative">
     <div class="bg-red-600 p-4 flex justify-between items-center">
-      <h3 class="text-white font-bold flex items-center gap-2">📸 Evidencia de Merma / Rechazo</h3>
+      <h3 class="text-white font-bold flex items-center gap-2">📸 Evidencia de Retorno / Avería</h3>
       <button (click)="cerrarEvidencia()" class="text-red-200 hover:text-white transition-colors bg-red-700/50 p-1.5 rounded-full">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
       </button>
     </div>
     <div class="p-2 bg-slate-100 flex justify-center items-center min-h-[300px]">
-      <img *ngIf="fotoUrlActual" [src]="fotoUrlActual" alt="Evidencia de Merma" class="max-w-full max-h-[70vh] object-contain rounded border border-slate-200 shadow-sm">
+      <img *ngIf="fotoUrlActual" [src]="fotoUrlActual" alt="Evidencia" class="max-w-full max-h-[70vh] object-contain rounded border border-slate-200 shadow-sm">
       <p *ngIf="!fotoUrlActual" class="text-slate-500 font-medium">No se pudo cargar la imagen.</p>
     </div>
   </div>
 </div>
 
-<!-- Modal Historial Entregas -->
 <div *ngIf="showDetalleModal" class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
   <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
     <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -356,11 +408,9 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200">Despacho Aprobado</span>
-              
               <button *ngIf="userRole === 'ADMIN' && editingEntregaId !== entrega.id" (click)="iniciarEdicionEntrega(entrega)" class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-200 transition-colors" title="Editar este reporte">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
               </button>
-              
               <button *ngIf="userRole === 'ADMIN' && editingEntregaId !== entrega.id" (click)="abrirConfirmacion('🗑️ Anular Reporte', '¿Estás seguro de anular este reporte del conductor? El sistema recalculará automáticamente.', 'Sí, anular', 'ELIMINAR_REPORTE', entrega)" class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg border border-transparent hover:border-red-200 transition-colors" title="Anular este reporte">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
               </button>
@@ -380,7 +430,7 @@
                 </div>
               </div>
               <div *ngIf="entrega.m05 > 0 || entrega.m10 > 0 || entrega.m15 > 0 || entrega.m45 > 0">
-                <strong class="text-red-600 block mb-1 uppercase tracking-wide text-xs">Mermas / Defectos:</strong>
+                <strong class="text-red-600 block mb-1 uppercase tracking-wide text-xs">Retornos / Averías:</strong>
                 <div class="flex gap-2">
                   <span *ngIf="entrega.m05 > 0" class="bg-red-50 text-red-700 border border-red-100 px-2 py-1 rounded">5kg: {{ entrega.m05 }}</span>
                   <span *ngIf="entrega.m10 > 0" class="bg-red-50 text-red-700 border border-red-100 px-2 py-1 rounded">10kg: {{ entrega.m10 }}</span>
@@ -416,10 +466,10 @@
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Mermas 5kg</label><input type="number" [(ngModel)]="entregaEditForm.m05" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
-              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Mermas 10kg</label><input type="number" [(ngModel)]="entregaEditForm.m10" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
-              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Mermas 15kg</label><input type="number" [(ngModel)]="entregaEditForm.m15" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
-              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Mermas 45kg</label><input type="number" [(ngModel)]="entregaEditForm.m45" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
+              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Retornos 5kg</label><input type="number" [(ngModel)]="entregaEditForm.m05" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
+              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Retornos 10kg</label><input type="number" [(ngModel)]="entregaEditForm.m10" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
+              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Retornos 15kg</label><input type="number" [(ngModel)]="entregaEditForm.m15" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
+              <div><label class="block text-[10px] font-bold text-red-500 mb-1">Retornos 45kg</label><input type="number" [(ngModel)]="entregaEditForm.m45" class="w-full text-sm font-bold text-slate-700 rounded border-slate-300 p-2 focus:ring-red-500 outline-none"></div>
             </div>
 
             <div class="mb-4">
@@ -437,40 +487,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL DE CONFIRMACIÓN UNIVERSAL (Forzado al frente con z-[999]) -->
-<div class="relative z-[999]">
-  <app-confirm-modal 
-    [isOpen]="confirmDialog.isOpen" 
-    [title]="confirmDialog.title" 
-    [message]="confirmDialog.message" 
-    [confirmText]="confirmDialog.confirmText" 
-    (confirm)="ejecutarAccionConfirmada()" 
-    (cancel)="cerrarConfirmacion()">
-  </app-confirm-modal>
-</div>
-
-<!-- MODAL: ELEGIR FECHA ANTES DE IMPORTAR EXCEL -->
-<div *ngIf="showModalFechaImportacion" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-  <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-fade-in">
-    <div class="bg-[#1E1B4B] px-6 py-4 flex items-center justify-between">
-      <h2 class="text-white text-lg font-bold tracking-wider">Fecha de Programación</h2>
-      <button (click)="cerrarModalFechaImportacion()" class="text-slate-400 hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
-    </div>
-    <div class="p-6 bg-slate-50 text-center">
-      <p class="text-sm text-slate-500 mb-4">¿A qué día de trabajo corresponde el Excel que vas a subir?</p>
-      
-      <input type="date" [(ngModel)]="fechaImportacion" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#4F46E5] outline-none text-[#4F46E5] font-black text-center text-lg mb-6 shadow-sm">
-      
-      <button (click)="continuarImportacion()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition-colors">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-        Continuar y Subir Excel
-      </button>
     </div>
   </div>
 </div>

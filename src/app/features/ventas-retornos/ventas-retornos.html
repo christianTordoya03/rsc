@@ -131,10 +131,15 @@
               <td class="p-4">
                 <div class="font-bold text-[#4F46E5]">{{ reg.placa }}</div>
                 <div class="text-slate-500 text-xs">{{ reg.fecha }}</div>
-                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold"
-                  [ngClass]="reg.estado === 'COMPLETADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
-                  {{ reg.estado }}
-                </span>
+                <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border"
+                  [ngClass]="{
+                    'bg-red-50 text-red-700 border-red-200': reg.estado === 'PENDIENTE' || reg.estado === 'ANULADO',
+                    'bg-purple-100 text-purple-700 border-purple-200': reg.estado === 'PROXIMO',
+                    'bg-amber-100 text-amber-700 border-amber-300': reg.estado === 'EN_PROCESO',
+                    'bg-emerald-100 text-emerald-700 border-emerald-200': reg.estado === 'COMPLETADO'
+                  }">
+                  {{ reg.estado === 'PENDIENTE' ? 'EN LISTA' : reg.estado === 'PROXIMO' ? 'PRÓXIMO' : reg.estado === 'EN_PROCESO' ? 'ATENDIENDO' : reg.estado }}
+              </span>
               </td>
               <td class="p-4">
                 <div class="font-medium text-slate-800">{{ reg.cliente }}</div>

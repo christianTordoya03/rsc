@@ -1,28 +1,19 @@
 <!-- PANTALLA PRINCIPAL (Solo visible si hay jornada) -->
 <div *ngIf="jornadaActiva" class="min-h-screen bg-slate-50 pb-20">
   <header class="bg-[#1E1B4B] text-white p-4 rounded-b-3xl shadow-lg relative">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center">
       <div>
         <p class="text-xs text-indigo-200 uppercase tracking-widest">Unidad Activa</p>
         <h1 class="text-2xl font-black">{{ datosJornada?.placa }}</h1>
       </div>
       <div class="flex gap-2">
-        <!-- NUEVO BOTÓN DE MANUAL -->
         <button (click)="showModalManual = true" class="bg-indigo-800 hover:bg-indigo-700 text-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center" title="Manual de Ayuda">
-          MANUAL<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          MANUAL<svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
         </button>
-        <!-- BOTONES EXISTENTES -->
-        <button (click)="showModalCheckout = true" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm">
-          Fin Turno
-        </button>
-        <button (click)="cerrarSesion()" class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Cerrar Sesión">
+        <button (click)="showModalSalir = true" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm" title="Salir o Cambiar Placa">
           Salir
         </button>
       </div>
-    </div>
-    <div class="flex items-center gap-2 text-sm text-indigo-100 bg-indigo-900/50 inline-flex px-3 py-1 rounded-full">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      Km Inicial: <span class="font-bold">{{ datosJornada?.kmInicial }}</span>
     </div>
   </header>
 
@@ -32,90 +23,124 @@
             [ngClass]="vistaActiva === 'DESPACHOS' ? 'bg-[#1E1B4B] text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'"
             class="flex-1 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-      Mis Despachos
+      Mis Entregas
     </button>
     <button (click)="vistaActiva = 'COMBUSTIBLE'"
             [ngClass]="vistaActiva === 'COMBUSTIBLE' ? 'bg-[#1E1B4B] text-white shadow-md' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'"
             class="flex-1 py-3 rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      Combustible / Km
+      Kilometraje / Gastos
     </button>
   </div>
 
   <!-- ================= VISTA 1: DESPACHOS ================= -->
   <div *ngIf="vistaActiva === 'DESPACHOS'" class="p-4 space-y-4 mt-2">
-    <h2 class="text-slate-500 font-bold text-sm uppercase px-2 flex justify-between">
-      <span>Mis Despachos Hoy</span>
-      <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">{{rutasAsignadas.length}}</span>
-    </h2>
-
-    <div *ngIf="rutasAsignadas.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm mt-4">
-      <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-      <p>No tienes rutas pendientes para esta placa.</p>
+    
+    <div class="flex flex-col gap-3">
+      <h2 class="text-slate-500 font-bold text-sm uppercase px-1 flex justify-between items-center">
+        <span>Rutas Pendientes</span>
+        <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">{{ rutasAsignadas.length }}</span>
+      </h2>
+      
+      <div class="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+        <button (click)="filtroModo = 'TODOS'" 
+                [ngClass]="filtroModo === 'TODOS' ? 'bg-[#4F46E5] text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
+                class="flex-1 py-2 rounded-lg text-[11px] font-bold transition-all text-center uppercase tracking-wider">
+          Ver Todos
+        </button>
+        <button (click)="filtroModo = 'ACTIVOS'"
+                [ngClass]="filtroModo === 'ACTIVOS' ? 'bg-[#4F46E5] text-white shadow' : 'text-slate-500 hover:bg-slate-50'"
+                class="flex-1 py-2 rounded-lg text-[11px] font-bold transition-all text-center uppercase tracking-wider">
+          Próximos / Atendiendo
+        </button>
+      </div>
     </div>
 
-    <!-- TARJETAS CON SEMÁFORO Y TRACKBY APLICADO -->
-    <div *ngFor="let ruta of rutasAsignadas; trackBy: trackById" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
-      <div class="absolute top-0 left-0 bottom-0 w-3" [ngClass]="getEstadoSemaforo(ruta).color"></div>
+    <div *ngIf="rutasVisibles.length === 0" class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 shadow-sm mt-4">
+      <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+      <p>No tienes rutas con este filtro.</p>
+    </div>
+
+    <div *ngFor="let ruta of rutasVisibles; trackBy: trackById" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+      <div class="absolute top-0 left-0 bottom-0 w-3" 
+           [ngClass]="{
+             'bg-red-500': ruta.estado === 'PENDIENTE',
+             'bg-purple-500': ruta.estado === 'PROXIMO',
+             'bg-amber-400': ruta.estado === 'EN_PROCESO',
+             'bg-green-500': ruta.estado === 'COMPLETADO'
+           }">
+      </div>
       
       <div class="p-4 pl-6">
-        <div class="flex justify-between items-start mb-2">
-          <div>
-            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" 
-              [ngClass]="{'bg-red-100 text-red-700': getEstadoSemaforo(ruta).pct === 0, 'bg-yellow-100 text-yellow-800': getEstadoSemaforo(ruta).pct > 0}">
-              {{ getEstadoSemaforo(ruta).texto }}
-            </span>
-            <h3 class="font-bold text-slate-800 text-lg mt-1 leading-tight">{{ ruta.clientes?.razon_social || ruta.cliente_id }}</h3>
-            <!-- OBSERVACIÓN LOGÍSTICA DESTACADA (Ej. CAMBIO / RECOJO) -->
-            <p *ngIf="ruta.observacion" class="text-xs font-bold text-red-600 bg-red-50 inline-block px-2 py-1 rounded mt-1 border border-red-100">
-              {{ ruta.observacion }}
-            </p>
-            <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path></svg>
-              {{ ruta.clientes?.direccion || 'Sin dirección' }}
-            </p>
-          </div>
+        <div class="flex justify-between items-start mb-2 gap-2">
+          
+          <select [ngModel]="ruta.estado" (ngModelChange)="cambiarEstadoRapido(ruta.id, $event)"
+                  [disabled]="ruta.estado === 'COMPLETADO'"
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-1.5 rounded-md outline-none border transition-colors cursor-pointer"
+                  [ngClass]="{
+                    'bg-red-50 text-red-700 border-red-200': ruta.estado === 'PENDIENTE',
+                    'bg-purple-50 text-purple-700 border-purple-200': ruta.estado === 'PROXIMO',
+                    'bg-amber-50 text-amber-700 border-amber-200': ruta.estado === 'EN_PROCESO',
+                    'bg-emerald-50 text-emerald-700 border-emerald-200': ruta.estado === 'COMPLETADO'
+                  }">
+            <option value="PENDIENTE">Cliente EN LISTA</option>
+            <option value="PROXIMO" *ngIf="ruta.estado !== 'COMPLETADO'">Próximo en Atender</option>
+            <option value="EN_PROCESO" *ngIf="ruta.estado !== 'COMPLETADO'">Atendiendo...</option>
+            <option value="COMPLETADO" *ngIf="ruta.estado === 'COMPLETADO'" disabled>Completado</option>
+          </select>
+          
         </div>
+        
+        <h3 class="font-bold text-slate-800 text-lg mt-1 leading-tight">{{ ruta.clientes?.razon_social || ruta.cliente_id }}</h3>
+        
+        <p *ngIf="ruta.observacion" class="text-xs font-bold text-red-600 bg-red-50 inline-block px-2 py-1 rounded mt-1 border border-red-100">
+          {{ ruta.observacion }}
+        </p>
+        <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path></svg>
+          {{ ruta.clientes?.direccion || 'Sin dirección' }}
+        </p>
 
         <div class="my-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
           <div class="flex justify-between text-xs font-bold text-slate-500 mb-2">
             <span>Progreso del Lote</span>
-            <span [ngClass]="{'text-red-500': getEstadoSemaforo(ruta).pct === 0, 'text-yellow-600': getEstadoSemaforo(ruta).pct > 0}">{{ getEstadoSemaforo(ruta).pct }}%</span>
+            <span [ngClass]="{
+              'text-red-500': ruta.estado === 'PENDIENTE', 
+              'text-purple-600': ruta.estado === 'PROXIMO', 
+              'text-amber-600': ruta.estado === 'EN_PROCESO', 
+              'text-green-600': ruta.estado === 'COMPLETADO'}">
+              {{ ((ruta.v05||0) + (ruta.v10||0) + (ruta.v15||0) + (ruta.v45||0) + (ruta.m05||0) + (ruta.m10||0) + (ruta.m15||0) + (ruta.m45||0)) / ((ruta.p05||0) + (ruta.p10||0) + (ruta.p15||0) + (ruta.p45||0)) * 100 || 0 | number:'1.0-0' }}%
+            </span>
           </div>
           <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-            <div class="h-2.5 rounded-full transition-all duration-500" [ngClass]="getEstadoSemaforo(ruta).color" [style.width.%]="getEstadoSemaforo(ruta).pct"></div>
+            <div class="h-2.5 rounded-full transition-all duration-500" 
+                 [ngClass]="{
+                   'bg-red-500': ruta.estado === 'PENDIENTE',
+                   'bg-purple-500': ruta.estado === 'PROXIMO',
+                   'bg-amber-400': ruta.estado === 'EN_PROCESO',
+                   'bg-green-500': ruta.estado === 'COMPLETADO'
+                 }"
+                 [style.width.%]="((ruta.v05||0) + (ruta.v10||0) + (ruta.v15||0) + (ruta.v45||0) + (ruta.m05||0) + (ruta.m10||0) + (ruta.m15||0) + (ruta.m45||0)) / ((ruta.p05||0) + (ruta.p10||0) + (ruta.p15||0) + (ruta.p45||0)) * 100 || 0">
+            </div>
           </div>
         </div>
 
-        <!-- DESGLOSE DE CARGA PARA EL OPERADOR (TAREA 3) -->
         <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
           <p class="text-xs font-bold text-blue-800 mb-2 uppercase tracking-wide">
             <i class="fas fa-boxes mr-1"></i> Detalle de Carga Programada
           </p>
-          
           <div class="flex flex-wrap gap-2">
-            <!-- Balón 5kg -->
             <div *ngIf="ruta.p05 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
-              <span class="text-[10px] text-gray-500 block">5 KG</span>
-              <span class="font-bold text-gray-800 text-lg">{{ ruta.p05 }}</span>
+              <span class="text-[10px] text-gray-500 block">5 KG</span><span class="font-bold text-gray-800 text-lg">{{ ruta.p05 }}</span>
             </div>
-            
-            <!-- Balón 10kg -->
             <div *ngIf="ruta.p10 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
-              <span class="text-[10px] text-gray-500 block">10 KG</span>
-              <span class="font-bold text-gray-800 text-lg">{{ ruta.p10 }}</span>
+              <span class="text-[10px] text-gray-500 block">10 KG</span><span class="font-bold text-gray-800 text-lg">{{ ruta.p10 }}</span>
             </div>
-            
-            <!-- Balón 15kg -->
             <div *ngIf="ruta.p15 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
-              <span class="text-[10px] text-gray-500 block">15 KG</span>
-              <span class="font-bold text-gray-800 text-lg">{{ ruta.p15 }}</span>
+              <span class="text-[10px] text-gray-500 block">15 KG</span><span class="font-bold text-gray-800 text-lg">{{ ruta.p15 }}</span>
             </div>
-            
-            <!-- Cilindro 45kg -->
             <div *ngIf="ruta.p45 > 0" class="bg-white px-3 py-1 rounded shadow-sm border border-gray-200 text-center flex-1 min-w-[70px]">
-              <span class="text-[10px] text-gray-500 block">45 KG</span>
-              <span class="font-bold text-gray-800 text-lg">{{ ruta.p45 }}</span>
+              <span class="text-[10px] text-gray-500 block">45 KG</span><span class="font-bold text-gray-800 text-lg">{{ ruta.p45 }}</span>
             </div>
           </div>
         </div>
@@ -125,21 +150,14 @@
           Registrar Entrega
         </button>
 
-        <!-- BOTÓN DE EVIDENCIA PENDIENTE -->
         <ng-container *ngIf="ruta.entregas_parciales && ruta.entregas_parciales.length > 0">
           <ng-container *ngFor="let entrega of ruta.entregas_parciales">
-            <!-- Si la entrega tuvo merma > 0 y NO tiene foto_merma_url -->
             <div *ngIf="((entrega.m05||0) + (entrega.m10||0) + (entrega.m15||0) + (entrega.m45||0)) > 0 && !entrega.foto_merma_url" 
                  class="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 flex flex-col items-center gap-2">
-              <p class="text-xs font-bold text-red-700 text-center">Falta evidencia fotográfica de este rechazo/merma:</p>
-              
-              <!-- Input escondido que abre la galería (Corregido sin parámetros) -->
+              <p class="text-xs font-bold text-red-700 text-center">Falta evidencia fotográfica de este retorno/avería:</p>
               <input type="file" accept="image/*" (change)="subirEvidenciaTardia($event, entrega.id, ruta.id)" [id]="'file_' + entrega.id" class="hidden">
-              
-              <!-- Botón que activa el input -->
               <label [for]="'file_' + entrega.id" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-xs text-center cursor-pointer flex justify-center items-center gap-2 shadow-sm transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                SUBIR FOTO DE GALERÍA
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> SUBIR FOTO DE GALERÍA
               </label>
             </div>
           </ng-container>
@@ -148,64 +166,64 @@
     </div>
   </div>
 
-  <!-- ================= VISTA 2: ADELANTO DE COMBUSTIBLE / KILOMETRAJE ================= -->
-  <div *ngIf="vistaActiva === 'COMBUSTIBLE'" class="p-4 space-y-4 mt-2">
+  <!-- ================= VISTA 2: GASTOS Y KILOMETRAJE ================= -->
+  <div *ngIf="vistaActiva === 'COMBUSTIBLE'" class="p-4 space-y-4 mt-2 animate-fade-in">
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-      <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-4">
-        <div class="bg-indigo-100 p-2 rounded-lg text-[#4F46E5]">
+      
+      <div class="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+        <div class="bg-indigo-100 p-2.5 rounded-lg text-[#4F46E5]">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </div>
         <div>
-          <h2 class="text-slate-800 font-black text-lg leading-tight">Gastos y Odómetro</h2>
-          <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Adelanta tu registro en ruta</p>
+          <h2 class="text-slate-800 font-black text-lg leading-tight">Control Vehicular</h2>
+          <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Registro interno del conductor</p>
         </div>
       </div>
 
-      <form [formGroup]="checkoutForm" class="space-y-4">
-        <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center mb-2 flex justify-between items-center px-4">
-          <p class="text-xs font-bold text-indigo-400">KM INICIAL</p>
-          <p class="text-lg font-black text-indigo-700">{{ datosJornada?.kmInicial }}</p>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">ODÓMETRO / KM ACTUAL</label>
-          <input type="number" formControlName="kmFinal" placeholder="Ej. 145120" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center text-xl tracking-wider focus:ring-2 focus:ring-[#4F46E5]">
+      <form [formGroup]="gastosForm" (ngSubmit)="guardarGastos()" class="space-y-5">
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">KM INICIAL</label>
+            <input type="number" formControlName="kmInicial" placeholder="0" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5] outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-500 mb-1">KM FINAL</label>
+            <input type="number" formControlName="kmFinal" placeholder="0" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5] outline-none">
+          </div>
         </div>
         
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">GALONES DIESEL</label>
-            <input type="number" formControlName="galones" placeholder="0" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-500 mb-1">MONTO GRIFO (S/)</label>
-            <input type="number" formControlName="montoCombustible" placeholder="0.00" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
+        <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-4">
+          <label class="block text-xs font-bold text-indigo-800 mb-2 uppercase tracking-wide">Abastecimiento de Combustible</label>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[10px] font-bold text-indigo-500 mb-1">GALONES DIESEL</label>
+              <input type="number" formControlName="galones" placeholder="0" class="w-full p-2.5 rounded-lg border border-indigo-200 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-indigo-500 mb-1">PRECIO x GALÓN</label>
+              <input type="number" formControlName="precioGalon" placeholder="0.00" class="w-full p-2.5 rounded-lg border border-indigo-200 text-center font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-orange-500 mb-1">GASTO EN PEAJES (S/)</label>
-          <input type="number" formControlName="peajes" placeholder="0.00" class="w-full p-3 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-700 text-center focus:ring-2 focus:ring-orange-400">
+          <label class="block text-xs font-bold text-orange-500 mb-1">GASTO TOTAL EN PEAJES (S/)</label>
+          <input type="number" formControlName="peajes" placeholder="Monto sumado de tickets" class="w-full p-3 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-700 text-center focus:ring-2 focus:ring-orange-400 outline-none">
         </div>
 
-        <button type="button" (click)="notificarProgreso()" class="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold py-3.5 rounded-xl transition-colors flex justify-center items-center gap-2">
-          <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-          Guardar Adelanto en Memoria
+        <button type="submit" [disabled]="isLoading" class="w-full mt-4 bg-[#1E1B4B] hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex justify-center items-center gap-2">
+          <span *ngIf="isLoading" class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          ENVIAR REPORTE
         </button>
       </form>
-    </div>
-    
-    <div class="bg-amber-50 rounded-xl p-4 border border-amber-200">
-       <p class="text-[11px] leading-relaxed text-amber-700 font-bold flex items-start gap-2">
-         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-         Llenar estos datos NO cierra tu jornada. Cuando termines todo tu día de reparto, debes presionar el botón rojo "Fin Turno" arriba a la derecha.
-       </p>
+
     </div>
   </div>
 </div>
 
 <!-- ========================================== -->
-<!-- 1. MODAL BLOQUEO CHECK-IN (Inicio de Jornada) -->
+<!-- 1. MODAL CHECK-IN SIMPLIFICADO -->
 <!-- ========================================== -->
 <div *ngIf="showModalCheckin" class="fixed inset-0 z-50 bg-[#1E1B4B] flex items-center justify-center p-4">
   <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
@@ -214,7 +232,7 @@
         <svg class="w-8 h-8 text-[#4F46E5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
       </div>
       <h2 class="text-2xl font-black text-slate-800">Iniciar Jornada</h2>
-      <p class="text-sm text-slate-500 mt-1">Registra tu unidad para destrabar tus rutas.</p>
+      <p class="text-sm text-slate-500 mt-1">Registra tu unidad para destrabar tus rutas de hoy.</p>
     </div>
 
     <form [formGroup]="checkinForm" (ngSubmit)="iniciarJornada()" class="space-y-4">
@@ -225,65 +243,15 @@
           <option *ngFor="let p of placas" [value]="p">{{ p }}</option>
         </select>
       </div>
-      <div>
-        <label class="block text-xs font-bold text-slate-500 mb-1">ODÓMETRO / KM INICIAL</label>
-        <input type="number" formControlName="kilometraje" placeholder="Ej. 145000" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-[#4F46E5] text-center text-xl tracking-wider">
-      </div>
-      
       <div class="pt-2 flex flex-col gap-2">
-        <button type="submit" [disabled]="isLoading" class="w-full bg-[#4F46E5] text-white font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2">
+        <button type="submit" [disabled]="isLoading" class="w-full bg-[#4F46E5] text-white font-bold py-4 rounded-xl shadow-lg flex justify-center items-center gap-2 hover:bg-indigo-700 transition">
           <span *ngIf="isLoading" class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          INICIAR TURNO
+          INGRESAR
         </button>
-        <button type="button" (click)="cerrarSesion()" class="w-full text-slate-400 font-bold py-2 text-sm hover:text-slate-600 transition">
+        <button (click)="showModalSalir = true" class="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm flex items-center justify-center" title="Salir o Cambiar Placa">
           Cerrar Sesión
         </button>
       </div>
-    </form>
-  </div>
-</div>
-
-<!-- ========================================== -->
-<!-- 2. MODAL CHECK-OUT (Fin de Jornada) -->
-<!-- ========================================== -->
-<div *ngIf="showModalCheckout" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-  <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
-    <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
-      <h2 class="text-xl font-black text-slate-800">Cerrar Jornada</h2>
-      <button (click)="showModalCheckout = false" class="text-slate-400 p-1"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-    </div>
-
-    <form [formGroup]="checkoutForm" (ngSubmit)="finalizarJornada()" class="space-y-4">
-      <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 text-center mb-2">
-        <p class="text-xs font-bold text-indigo-400">KM INICIAL DE HOY</p>
-        <p class="text-lg font-black text-indigo-700">{{ datosJornada?.kmInicial }}</p>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-slate-500 mb-1">ODÓMETRO / KM FINAL <span class="text-red-500">*</span></label>
-        <input type="number" formControlName="kmFinal" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center text-xl tracking-wider focus:ring-2 focus:ring-[#4F46E5]">
-      </div>
-      
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">GALONES DIESEL</label>
-          <input type="number" formControlName="galones" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-500 mb-1">MONTO GRIFO (S/)</label>
-          <input type="number" formControlName="montoCombustible" class="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-700 text-center focus:ring-2 focus:ring-[#4F46E5]">
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-bold text-orange-500 mb-1">GASTO EN PEAJES (S/)</label>
-        <input type="number" formControlName="peajes" class="w-full p-3 rounded-xl border border-orange-200 bg-orange-50 font-bold text-orange-700 text-center focus:ring-2 focus:ring-orange-400">
-      </div>
-
-      <button type="submit" [disabled]="isLoading" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg mt-4 flex justify-center items-center gap-2">
-        <span *ngIf="isLoading" class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-        CERRAR Y GUARDAR
-      </button>
     </form>
   </div>
 </div>
@@ -306,7 +274,6 @@
 
     <form [formGroup]="despachoForm" (ngSubmit)="registrarDespacho()" class="p-5 overflow-y-auto space-y-6">
 
-      <!-- ================= BANNER DINÁMICO ================= -->
       <div class="bg-blue-50 p-3 rounded-xl border border-blue-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-blue-800">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
@@ -320,9 +287,7 @@
           <span *ngIf="getFaltante('05')===0 && getFaltante('10')===0 && getFaltante('15')===0 && getFaltante('45')===0" class="text-xs text-blue-600 italic">No hay pendientes</span>
         </div>
       </div>
-      <!-- ================= FIN BANNER ================= -->
 
-      <!-- Venta Real Entregada -->
       <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100">
         <label class="block text-xs font-bold text-[#4F46E5] mb-2 uppercase tracking-wide">Entregado en este viaje</label>
         <div class="grid grid-cols-4 gap-1.5">
@@ -333,9 +298,8 @@
         </div>
       </div>
 
-      <!-- Mermas / Defectos -->
       <div class="bg-red-50 p-3 rounded-xl border border-red-100">
-        <label class="block text-xs font-bold text-red-600 mb-2 uppercase tracking-wide">Mermas / Defectos / Rechazos</label>
+        <label class="block text-xs font-bold text-red-600 mb-2 uppercase tracking-wide">Retornos</label>
         <div class="grid grid-cols-4 gap-1.5">
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">05 KG</span><input type="number" formControlName="m05" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
           <div class="text-center"><span class="block text-[10px] font-bold text-red-400 mb-1">10 KG</span><input type="number" formControlName="m10" class="w-full text-center py-2 px-1 border border-red-200 rounded focus:ring-2 focus:ring-red-500 outline-none font-bold text-red-600 bg-white"></div>
@@ -351,7 +315,6 @@
 
       <hr class="border-slate-100">
 
-      <!-- Campos Extra -->
       <div>
         <label class="block text-xs font-bold text-slate-700 mb-1">Cambio de Programación (Cant. Cilindros)</label>
         <input type="number" formControlName="cambio_programacion" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#4F46E5] outline-none">
@@ -387,7 +350,7 @@
 </div>
 
 <!-- ========================================== -->
-<!-- 4. MODAL MANUAL DE USUARIO (Ayuda Rápida)  -->
+<!-- 4. MODAL MANUAL DE USUARIO                 -->
 <!-- ========================================== -->
 <div *ngIf="showModalManual" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 transition-opacity">
   <div class="bg-white w-full max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90vh] flex flex-col">
@@ -409,17 +372,14 @@
 
     <div class="p-5 overflow-y-auto space-y-6">
       <div class="space-y-4 text-slate-600 text-sm">
-        <p class="font-medium">Bienvenido al sistema. Sigue estos 3 pasos obligatorios en tu día a día:</p>
-        
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
           <h4 class="font-bold text-slate-800 flex items-center gap-2 mb-2">
             <span class="bg-[#4F46E5] text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">1</span>
-            Inicio de Jornada
+            Selector de Estado
           </h4>
           <ul class="list-disc pl-5 space-y-1 text-xs">
-            <li>Selecciona la placa del vehículo que vas a conducir.</li>
-            <li>Ingresa el <strong>Kilometraje Inicial</strong> (lo que marca el tablero).</li>
-            <li>El sistema destrabará tu pantalla y mostrará tus rutas asignadas.</li>
+            <li>Cambia el estado superior a <strong>"Próximo en Atender"</strong> para avisar a logística tu siguiente movimiento.</li>
+            <li>Selecciona <strong>"Atendiendo..."</strong> cuando estés en la puerta del cliente.</li>
           </ul>
         </div>
 
@@ -429,23 +389,9 @@
             Registro de Entregas
           </h4>
           <ul class="list-disc pl-5 space-y-1 text-xs">
-            <li>Tus despachos aparecerán con una barra de progreso.</li>
-            <li>Pulsa "Registrar Entrega" al llegar al cliente.</li>
+            <li>Pulsa "Registrar Entrega" al finalizar la descarga.</li>
             <li>Ingresa los cilindros entregados en la <strong>Venta Real</strong>.</li>
-            <li>Si hay envases con fallas, regístralos en <strong>Mermas</strong> (requiere foto obligatoria).</li>
-            <li>El pedido pasará a color verde (Completado) cuando se entregue el total programado.</li>
-          </ul>
-        </div>
-
-        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-          <h4 class="font-bold text-slate-800 flex items-center gap-2 mb-2">
-            <span class="bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">3</span>
-            Fin de Turno (Combustible)
-          </h4>
-          <ul class="list-disc pl-5 space-y-1 text-xs">
-            <li>Al finalizar el día, pulsa el botón rojo <strong>"Fin Turno"</strong>.</li>
-            <li>Ingresa el <strong>Kilometraje Final</strong> que marca tu tablero.</li>
-            <li>Anota los galones abastecidos, el costo del grifo y si hubo pago de peajes.</li>
+            <li>El pedido se marcará <strong>"Completado"</strong> y se bloqueará cuando entregues la cantidad exacta solicitada.</li>
           </ul>
         </div>
       </div>
@@ -454,6 +400,36 @@
     <div class="p-4 border-t border-slate-100 bg-white sm:rounded-b-2xl shrink-0">
       <button (click)="showModalManual = false" class="w-full bg-slate-100 text-slate-700 font-bold py-3 rounded-lg hover:bg-slate-200 transition-colors">
         ENTENDIDO, VOLVER A MIS RUTAS
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================== -->
+<!-- 5. MODAL SALIR / CAMBIAR PLACA             -->
+<!-- ========================================== -->
+<div *ngIf="showModalSalir" class="fixed inset-0 z-[999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+  <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+        <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+      </div>
+      <h2 class="text-xl font-black text-slate-800">¿Vas a salir?</h2>
+    </div>
+
+    <div class="flex flex-col gap-3">
+      <!-- <button (click)="liberarPlaca()" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+        Cambiar de Unidad (Placa)
+      </button> -->
+
+      <button (click)="cerrarSesionCompleta()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+        Cerrar Sesión de Usuario
+      </button>
+
+      <button (click)="showModalSalir = false" class="w-full text-slate-500 font-bold py-3 hover:bg-slate-50 rounded-xl transition-colors mt-1 border border-transparent hover:border-slate-200">
+        Cancelar y Volver
       </button>
     </div>
   </div>

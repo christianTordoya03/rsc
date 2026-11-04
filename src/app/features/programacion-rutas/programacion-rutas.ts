@@ -18,6 +18,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef;
 
   modoVista: 'DISTRIBUIDORES' | 'INDUSTRIAS' = 'DISTRIBUIDORES';
+  filtroAtendiendo = false; 
 
   showForm = false;
   isLoading = false;
@@ -29,7 +30,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   clientesActivos: any[] = [];
   clientesNoEncontrados: string[] = [];
   
-  // MODAL FECHA IMPORTACION
   showModalFechaImportacion = false;
   fechaImportacion = '';
   
@@ -38,7 +38,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   rutaForm: FormGroup;
   filtroCliente = '';
   filtroPlaca = '';
-  filtroFecha = new Date().toISOString().split('T')[0]; // POR DEFECTO CARGA "HOY"
+  filtroFecha = new Date().toISOString().split('T')[0];
 
   paginaPendientes = 1;
   paginaHistorial = 1;
@@ -52,15 +52,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   editingEntregaId: string | null = null;
   entregaEditForm: any = {};
 
-  confirmDialog = {
-    isOpen: false,
-    title: '',
-    message: '',
-    confirmText: '',
-    actionType: '',
-    payload: null as any
-  };
-
+  confirmDialog = { isOpen: false, title: '', message: '', confirmText: '', actionType: '', payload: null as any };
   userName = ''; 
   userRole = ''; 
 
@@ -82,14 +74,10 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.cargarErroresGuardados();
-
     const { data: { session } } = await this.supabase.auth.getSession();
     if (session) {
       const { data } = await this.supabase.perfiles.select('nombre_completo, rol').eq('id', session.user.id).single();
-      if (data) {
-        this.userName = data.nombre_completo;
-        this.userRole = data.rol || '';
-      }
+      if (data) { this.userName = data.nombre_completo; this.userRole = data.rol || ''; }
     }
     await this.cargarDatosBase();
     await this.cargarRutasDelDia();
@@ -100,40 +88,31 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     this.confirmDialog = { isOpen: true, title, message, confirmText, actionType, payload };
   }
 
-  cerrarConfirmacion() {
-    this.confirmDialog.isOpen = false;
-  }
+  cerrarConfirmacion() { this.confirmDialog.isOpen = false; }
 
-  // ==== LOGICA DEL MODAL DE FECHA DE IMPORTACION ====
   abrirModalFechaImportacion() {
     this.fechaImportacion = this.filtroFecha; 
     this.showModalFechaImportacion = true;
   }
-
-  cerrarModalFechaImportacion() {
-    this.showModalFechaImportacion = false;
-  }
+  cerrarModalFechaImportacion() { this.showModalFechaImportacion = false; }
 
   continuarImportacion() {
     if (!this.fechaImportacion) return this.toast.showWarning('Debe seleccionar una fecha');
     this.showModalFechaImportacion = false;
     this.fileInput.nativeElement.click(); 
   }
-  // =================================================
 
   ejecutarAccionConfirmada() {
     const { actionType, payload } = this.confirmDialog;
     this.cerrarConfirmacion();
-    
     if (actionType === 'ELIMINAR_REPORTE') this.eliminarEntregaParcial(payload);
     else if (actionType === 'EDITAR_REPORTE') this.guardarEdicionEntrega(payload);
     else if (actionType === 'ANULAR_RUTA') this.anularRuta(payload);
+    else if (actionType === 'VACIAR_TODO') this.executeDeleteAll();
   }
 
   ngOnDestroy() {
-    if (this.autoRefreshSub) {
-      clearInterval(this.autoRefreshSub);
-    }
+    if (this.autoRefreshSub) clearInterval(this.autoRefreshSub);
   }
 
   iniciarSincronizacionSilenciosa() {
@@ -143,18 +122,13 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           const { data, error } = await this.supabase.despachos
             .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
             .order('creado_en', { ascending: false });
-
-          if (!error && data) {
-            this.rutas = data; 
-          }
+          if (!error && data) this.rutas = data; 
         } catch (err) {} 
       }
     }, 10000); 
   }
 
-  trackById(index: number, item: any): string {
-    return item.id;
-  }
+  trackById(index: number, item: any): string { return item.id; }
 
   cambiarModoVista(modo: 'DISTRIBUIDORES' | 'INDUSTRIAS') {
     this.modoVista = modo;
@@ -164,7 +138,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   }
 
   cargarErroresGuardados() {
-    // Ahora busca la alerta usando el MODO y la FECHA EXACTA
     const erroresGuardados = localStorage.getItem(`rutasErrores_${this.modoVista}_${this.filtroFecha}`);
     if (erroresGuardados) {
       this.clientesNoEncontrados = JSON.parse(erroresGuardados);
@@ -181,24 +154,17 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   async cargarDatosBase() {
     try {
       let todosLosClientes: any[] = [];
-      let desde = 0;
-      const paso = 500;
-
+      let desde = 0; const paso = 500;
       while (true) {
         const { data, error } = await this.supabase.from('clientes')
           .select('id, razon_social, ruc, codigo_cliente, tipo_cliente') 
-          .eq('estado', true)
-          .order('id', { ascending: true }) 
-          .range(desde, desde + paso - 1);
-
+          .eq('estado', true).order('id', { ascending: true }).range(desde, desde + paso - 1);
         if (error) throw error;
         if (!data || data.length === 0) break;
-
         todosLosClientes.push(...data);
         if (data.length < paso) break;
         desde += paso;
       }
-      
       todosLosClientes.sort((a, b) => (a.razon_social || '').localeCompare(b.razon_social || ''));
       this.clientesActivos = todosLosClientes;
     } catch (error) {
@@ -212,11 +178,10 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       const { data, error } = await this.supabase.despachos
         .select(`*, clientes ( razon_social, tipo_cliente ), perfiles!despachos_operador_id_fkey ( nombre_completo )`)
         .order('creado_en', { ascending: false });
-
       if (error) throw error;
       this.rutas = data || [];
     } catch (error: any) {
-      this.toast.showError('Error al cargar rutas: ' + error.message);
+      this.toast.showError('Error al cargar rutas');
     } finally {
       this.isLoading = false;
     }
@@ -225,7 +190,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   onSearchChange() {
     this.paginaPendientes = 1;
     this.paginaHistorial = 1;
-    this.cargarErroresGuardados(); // <-- MAGIA: Actualiza la alerta roja al cambiar la fecha
+    this.cargarErroresGuardados(); 
   }
 
   cumpleFiltros(r: any): boolean {
@@ -240,15 +205,18 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     const filtradas = this.rutas.filter(r => {
       const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
       const coincideModo = this.modoVista === origen;
-      return coincideModo && (r.estado === 'PENDIENTE' || r.estado === 'EN_RUTA' || r.estado === 'EN_PROCESO') && this.cumpleFiltros(r);
+      
+      const esPendienteGeneral = ['PENDIENTE', 'EN_RUTA', 'EN_PROCESO', 'PROXIMO'].includes(r.estado);
+      const cumpleFiltroFechas = this.cumpleFiltros(r);
+      const cumpleFiltroActivos = this.filtroAtendiendo ? ['EN_PROCESO', 'PROXIMO'].includes(r.estado) : true;
+
+      return coincideModo && esPendienteGeneral && cumpleFiltroFechas && cumpleFiltroActivos;
     }); 
 
     return filtradas.sort((a, b) => {
-      const avanceA = (a.v05||0) + (a.v10||0) + (a.v15||0) + (a.v45||0) + (a.m05||0) + (a.m10||0) + (a.m15||0) + (a.m45||0);
-      const avanceB = (b.v05||0) + (b.v10||0) + (b.v15||0) + (b.v45||0) + (b.m05||0) + (b.m10||0) + (b.m15||0) + (b.m45||0);
-
-      if (avanceA > 0 && avanceB === 0) return -1;
-      if (avanceB > 0 && avanceA === 0) return 1;
+      const pesoEstado = (estado: string) => estado === 'EN_PROCESO' ? 3 : estado === 'PROXIMO' ? 2 : 1;
+      if (pesoEstado(a.estado) > pesoEstado(b.estado)) return -1;
+      if (pesoEstado(b.estado) > pesoEstado(a.estado)) return 1;
 
       const clienteA = a.clientes?.razon_social || '';
       const clienteB = b.clientes?.razon_social || '';
@@ -258,7 +226,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
   get rutasHistorial() { 
     return this.rutas.filter(r => {
-      const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
+      const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTripciones');
       const coincideModo = this.modoVista === origen;
       return coincideModo && (r.estado === 'COMPLETADO' || r.estado === 'ANULADO') && this.cumpleFiltros(r);
     }); 
@@ -267,11 +235,8 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   get clientesParaFormulario() {
     return this.clientesActivos.filter(c => {
       const tipo = c.tipo_cliente || 'DISTRIBUIDORES';
-      if (this.modoVista === 'INDUSTRIAS') {
-        return tipo.includes('INDUSTRIAS');
-      } else {
-        return tipo.includes('DISTRIBUIDORES') || (!tipo.includes('INDUSTRIAS') && !tipo.includes('DISTRIBUIDORES'));
-      }
+      if (this.modoVista === 'INDUSTRIAS') return tipo.includes('INDUSTRIAS');
+      return tipo.includes('DISTRIBUIDORES') || (!tipo.includes('INDUSTRIAS') && !tipo.includes('DISTRIBUIDORES'));
     });
   }
 
@@ -293,15 +258,9 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     if (cell.isMerged && cell.master) return cell.master.value;
     return cell.value;
   }
-
-  getCellValueText(cell: any): string {
-    return this.getString(this.getCellValue(cell));
-  }
-
-  getCellValueNum(cell: any): number {
-    return this.getNum(this.getCellValue(cell));
-  }
-
+  getCellValueText(cell: any): string { return this.getString(this.getCellValue(cell)); }
+  getCellValueNum(cell: any): number { return this.getNum(this.getCellValue(cell)); }
+  
   getNum(val: any): number {
     if (val === null || val === undefined || val === '') return 0;
     if (typeof val === 'number') return val;
@@ -314,7 +273,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     if (val === null || val === undefined) return '';
     if (typeof val === 'string') return val.trim().toUpperCase();
     if (typeof val === 'number') return String(val).trim().toUpperCase();
-    
     if (typeof val === 'object') {
       if (val.result !== undefined && val.result !== null) return this.getString(val.result); 
       if (val.richText) return val.richText.map((rt: any) => rt.text).join('').trim().toUpperCase();
@@ -356,18 +314,11 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(await file.arrayBuffer());
       
-      // PRIORIDAD PARA LA HOJA IMPRIMIR
       const worksheet = workbook.getWorksheet('Imprimir') || workbook.getWorksheet('Programacion') || workbook.getWorksheet('Programación') || workbook.worksheets[0];
       const sheetInicial = workbook.getWorksheet('PROGRAMACION INICIAL'); 
 
-      const normalize = (str: any) => {
-          if (str === null || str === undefined) return '';
-          return String(str).trim().toUpperCase().replace(/\s+/g, ' ');
-      };
-      const stripPunct = (str: any) => {
-          if (str === null || str === undefined) return '';
-          return String(str).replace(/[^A-Z0-9]/g, '');
-      };
+      const normalize = (str: any) => str ? String(str).trim().toUpperCase().replace(/\s+/g, ' ') : '';
+      const stripPunct = (str: any) => str ? String(str).replace(/[^A-Z0-9]/g, '') : '';
       
       const mapNombres = new Map<string, string>();
       const mapCleanNombres = new Map<string, string>();
@@ -388,15 +339,11 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
       if (sheetInicial) {
         sheetInicial.eachRow((row: any) => {
-          let codSap = '';
-          let pedido = '';
-          let nombre = '';
-
+          let codSap = ''; let pedido = ''; let nombre = '';
           for (let i = 1; i <= 15; i++) { 
             const val = this.getCellValueText(row.getCell(i));
             if (!val || val === '0') continue;
             const valClean = val.replace(/\s/g, '');
-
             if (/^4[45]\d{5}/.test(valClean)) pedido = valClean; 
             else if (/^\d{5,10}$/.test(valClean)) codSap = valClean; 
             else if (val.length > 4 && /[A-Z]/.test(val) && !['LIMA LOCAL', 'SUR CHICO', 'NORTE CHICO', 'PEDIDO', 'DISTRIBUIDOR', 'CLIENTE', 'DIRECCION', 'NOMBRE', 'NOMBRE DE CLIENTE'].includes(val)) {
@@ -444,7 +391,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
             const cCod = stripPunct(c.codigo_cliente);
             const cRuc = stripPunct(c.ruc);
             const cNom = stripPunct(c.razon_social);
-            
             if (cCod && cCod === tClean) return true;
             if (cRuc && cRuc === tClean) return true;
             if (cNom && cNom === tClean) return true;
@@ -453,14 +399,12 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
         });
 
         if (matchFallback) return matchFallback.id;
-
         return null;
       };
 
       const nuevasRutas: any[] = [];
       const noEncontrados = new Set<string>();
-      
-      const fechaProg = this.fechaImportacion; // 🔥 FUERZA LA FECHA ELEGIDA EN EL MODAL
+      const fechaProg = this.fechaImportacion; 
 
       if (this.modoVista === 'INDUSTRIAS') {
         let cPlaca = 0, cTrans = 0, cCliente = 0, cCant = 0, cTipo = 0, cObs = 0, cEntrega = 0;
@@ -481,7 +425,7 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           }
         });
 
-        if (headerRow === -1) throw new Error('No se detectó el formato de Industrias (Falta columna "NOMBRE DE CLIENTE").');
+        if (headerRow === -1) throw new Error('No se detectó el formato de Industrias.');
 
         const rutasAgrupadas = new Map<string, any>();
 
@@ -502,9 +446,8 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           let esRecojo = false;
 
           const strCheck = (txtEntrega + ' ' + obs + ' ' + txtCliente).toUpperCase();
-          if (strCheck.includes('RECOJO')) {
-            esRecojo = true; cartelLogistico = '📦 RECOJO';
-          } else if (strCheck.includes('BLOQUEAD') || strCheck.includes('CAMBIO')) {
+          if (strCheck.includes('RECOJO')) { esRecojo = true; cartelLogistico = '📦 RECOJO'; } 
+          else if (strCheck.includes('BLOQUEAD') || strCheck.includes('CAMBIO')) {
             esRecojo = true; cartelLogistico = '🚫 ' + (strCheck.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
           }
 
@@ -512,7 +455,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
           const placaFinal = this.encontrarPlacaOficial(txtPlaca) || this.encontrarPlacaOficial(txtTrans) || 'SIN PLACA';
           const obsFinal = cartelLogistico || obs;
-
           const clienteId = findClienteId(txtCliente);
 
           if (!clienteId) {
@@ -521,7 +463,9 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
              return;
           }
 
-          const mapKey = `${placaFinal}_${clienteId}`;
+          // LÓGICA DE AGRUPACIÓN ESTRICTA (Diferenciador: Número de Entrega o Transporte)
+          const mapKey = `${placaFinal}_${clienteId}_${txtEntrega}_${txtTrans}`;
+          
           if (!rutasAgrupadas.has(mapKey)) {
             rutasAgrupadas.set(mapKey, {
               fecha_despacho: fechaProg, placa: placaFinal, cliente_id: clienteId,
@@ -537,12 +481,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           if (tipo.includes('10')) ruta.p10 += cant;
           if (tipo.includes('15')) ruta.p15 += cant;
           if (tipo.includes('45')) ruta.p45 += cant;
-
-          if (obsFinal && obsFinal !== ruta.observacion) {
-            if (!ruta.observacion.includes(obsFinal)) {
-               ruta.observacion = ruta.observacion ? `${ruta.observacion} | ${obsFinal}` : obsFinal;
-            }
-          }
         });
 
         nuevasRutas.push(...Array.from(rutasAgrupadas.values()));
@@ -550,15 +488,15 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
       } else {
         let colPlaca = 0, colTransportes = 0, colPedido = 0, colEntrega = 0, colDistribuidor = 0; 
         let colLimite = 999; 
-        const cols05: number[] = [], cols10: number[] = [], cols15: number[] = [], cols45: number[] = [];
+        // USAMOS SET PARA EVITAR QUE LA MISMA COLUMNA SE AGREGUE DOS VECES
+        const cols05 = new Set<number>(); const cols10 = new Set<number>(); 
+        const cols15 = new Set<number>(); const cols45 = new Set<number>();
 
         worksheet.eachRow((row: any, rowNum: number) => {
           if (rowNum <= 5) { 
             row.eachCell((cell: any, colNum: number) => {
               const val = this.getCellValueText(cell);
-              if (val.includes('TOTAL KG') || val === 'TOTAL') {
-                  if (colNum < colLimite) colLimite = colNum;
-              }
+              if (val.includes('TOTAL KG') || val === 'TOTAL') { if (colNum < colLimite) colLimite = colNum; }
               if (val === 'PLACA' && colPlaca === 0) colPlaca = colNum;
               if (val === 'TRANSPORTES' && colTransportes === 0) colTransportes = colNum;
               if (val === 'PEDIDO' && colPedido === 0) colPedido = colNum;
@@ -569,17 +507,14 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
 
               if (colNum < colLimite) {
                   const valLimpio = val.replace(/\s+/g, '');
-                  // 1. Detección Clásica
-                  if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.push(colNum);
-                  if (valLimpio.includes('10KG')) cols10.push(colNum);
-                  if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.push(colNum);
-                  if (valLimpio.includes('45KG')) cols45.push(colNum);
-                  
-                  // 2. Detección por Códigos SAP de Material (Hoja Imprimir)
-                  if (['41000102', '41000103', '41000101'].includes(valLimpio)) cols05.push(colNum);
-                  if (['41000104', '41000105', '41000110', '41000111', '41000108', '41000109'].includes(valLimpio)) cols10.push(colNum);
-                  if (['41000115', '41000113', '41000114', '41000116'].includes(valLimpio)) cols15.push(colNum);
-                  if (['41000119', '41000121', '41000106', '41000107'].includes(valLimpio)) cols45.push(colNum);
+                  if (valLimpio.includes('5KG') && !valLimpio.includes('15') && !valLimpio.includes('45')) cols05.add(colNum);
+                  if (valLimpio.includes('10KG')) cols10.add(colNum);
+                  if (val.includes('15 KG') || val.includes('M-15') || val.includes('M15') || valLimpio.includes('15KG') || valLimpio.includes('M15')) cols15.add(colNum);
+                  if (valLimpio.includes('45KG')) cols45.add(colNum);
+                  if (['41000102', '41000103', '41000101'].includes(valLimpio)) cols05.add(colNum);
+                  if (['41000104', '41000105', '41000110', '41000111', '41000108', '41000109'].includes(valLimpio)) cols10.add(colNum);
+                  if (['41000115', '41000113', '41000114', '41000116'].includes(valLimpio)) cols15.add(colNum);
+                  if (['41000119', '41000121', '41000106', '41000107'].includes(valLimpio)) cols45.add(colNum);
               }
             });
           }
@@ -590,15 +525,16 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
         if (colEntrega === 0) colEntrega = 4;
         if (colDistribuidor === 0) colDistribuidor = 5; 
 
+        // AGRUPACIÓN LOGÍSTICA PARA DISTRIBUIDORES
+        const rutasAgrupadas = new Map<string, any>();
+
         worksheet.eachRow((row: any, rowNumber: number) => {
           if (rowNumber < 5) return; 
 
           let esSubTotal = false;
           for (let i = 1; i <= 10; i++) {
             const valC = this.getCellValueText(row.getCell(i));
-            if (valC.includes('SUB TOTAL') || valC.includes('SUBTOTAL') || valC === 'TOTAL') {
-               esSubTotal = true; break;
-            }
+            if (valC.includes('SUB TOTAL') || valC.includes('SUBTOTAL') || valC === 'TOTAL') { esSubTotal = true; break; }
           }
           if (esSubTotal) return; 
 
@@ -609,7 +545,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           cols45.forEach((c: number) => p45 += this.getCellValueNum(row.getCell(c)));
 
           const sumaCilindros = p05 + p10 + p15 + p45;
-
           const txtColPlaca = this.getCellValueText(row.getCell(colPlaca));
           const txtColTrans = colTransportes > 0 ? this.getCellValueText(row.getCell(colTransportes)) : '';
           const txtPedido = this.getCellValueText(row.getCell(colPedido));
@@ -617,21 +552,15 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
           let textoBusqueda = this.getCellValueText(row.getCell(colDistribuidor));
 
           let nombreDelPedido = '';
-          if (txtPedido) {
-             nombreDelPedido = mapPedidoADistribuidor.get(txtPedido) || '';
-          }
-
-          if (!textoBusqueda || textoBusqueda === '0') {
-             textoBusqueda = nombreDelPedido || txtPedido;
-          }
+          if (txtPedido) nombreDelPedido = mapPedidoADistribuidor.get(txtPedido) || '';
+          if (!textoBusqueda || textoBusqueda === '0') textoBusqueda = nombreDelPedido || txtPedido;
 
           let esRecojo = false;
           let cartelLogistico: string | null = null;
-
           const strCheck = (txtEntrega + ' ' + txtPedido + ' ' + textoBusqueda).toUpperCase();
-          if (strCheck.includes('RECOJO')) {
-            esRecojo = true; cartelLogistico = '📦 RECOJO';
-          } else if (strCheck.includes('BLOQUEAD') || strCheck.includes('CAMBIO')) {
+          
+          if (strCheck.includes('RECOJO')) { esRecojo = true; cartelLogistico = '📦 RECOJO'; } 
+          else if (strCheck.includes('BLOQUEAD') || strCheck.includes('CAMBIO')) {
             esRecojo = true; cartelLogistico = '🚫 ' + (strCheck.includes('CAMBIO') ? 'CAMBIO' : 'BLOQUEADO');
           }
 
@@ -663,33 +592,34 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
             return;
           }
 
+          // LÓGICA DE AGRUPACIÓN ESTRICTA PARA EVITAR FUSIONES ERRÓNEAS
+          const mapKey = `${placaFinal}_${clienteId}_${txtPedido}_${textoBusqueda}`;
+
           if (placaFinal && clienteId && (sumaCilindros > 0 || esRecojo)) {
-            nuevasRutas.push({
-              fecha_despacho: fechaProg,
-              placa: placaFinal, 
-              cliente_id: clienteId,
-              observacion: obsFinal, 
-              p05, p10, p15, p45,
-              estado: 'PENDIENTE', venta_real: 0, merma: 0,
-              programador_nombre: this.userName,
-              tipo_negocio: this.modoVista 
-            });
+            if (!rutasAgrupadas.has(mapKey)) {
+               rutasAgrupadas.set(mapKey, {
+                 fecha_despacho: fechaProg, placa: placaFinal, cliente_id: clienteId,
+                 observacion: obsFinal || '', p05: 0, p10: 0, p15: 0, p45: 0,
+                 estado: 'PENDIENTE', venta_real: 0, merma: 0,
+                 programador_nombre: this.userName, tipo_negocio: this.modoVista 
+               });
+            }
+
+            const ruta = rutasAgrupadas.get(mapKey);
+            ruta.p05 += p05; ruta.p10 += p10; ruta.p15 += p15; ruta.p45 += p45;
           }
         });
+        
+        nuevasRutas.push(...Array.from(rutasAgrupadas.values()));
       }
 
       if (noEncontrados.size > 0) {
         const arrayErrores = Array.from(noEncontrados);
         localStorage.setItem(`rutasErrores_${this.modoVista}_${fechaProg}`, JSON.stringify(arrayErrores));
-        // Si estás mirando el mismo día que acabas de subir, muéstralo de inmediato
-        if (this.filtroFecha === fechaProg) {
-           this.clientesNoEncontrados = arrayErrores;
-        }
+        if (this.filtroFecha === fechaProg) this.clientesNoEncontrados = arrayErrores;
       } else {
         localStorage.removeItem(`rutasErrores_${this.modoVista}_${fechaProg}`);
-        if (this.filtroFecha === fechaProg) {
-           this.clientesNoEncontrados = []; 
-        }
+        if (this.filtroFecha === fechaProg) this.clientesNoEncontrados = []; 
       }
 
       const rutasNuevasFiltradas = nuevasRutas.filter(nr => {
@@ -697,7 +627,9 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
            r.fecha_despacho === nr.fecha_despacho && 
            r.placa === nr.placa && 
            r.cliente_id === nr.cliente_id &&
-           r.estado !== 'ANULADO'
+           r.estado !== 'ANULADO' &&
+           // Comprobación de que no estamos repitiendo la misma carga exacta
+           (r.p05 === nr.p05 && r.p10 === nr.p10 && r.p15 === nr.p15 && r.p45 === nr.p45)
         );
       });
 
@@ -781,7 +713,15 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     }
   }
 
-  confirmDeleteAll() { this.showDeleteAllConfirm = true; }
+  confirmDeleteAll() { 
+    this.abrirConfirmacion(
+      '⚠️ PELIGRO: VACIAR PROGRAMACIÓN', 
+      `¿Estás seguro de vaciar TODAS las rutas de ${this.modoVista} del día ${this.filtroFecha}? Esta acción es irreversible.`, 
+      'Sí, vaciar', 
+      'VACIAR_TODO', 
+      null
+    ); 
+  }
   cancelDeleteAll() { this.showDeleteAllConfirm = false; }
 
   async executeDeleteAll() {
@@ -789,11 +729,8 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
     try {
       const rutasABorrar = this.rutas.filter(r => {
         const origen = r.tipo_negocio || (r.clientes?.tipo_cliente === 'B2B/INDUSTRIAS' ? 'INDUSTRIAS' : 'DISTRIBUIDORES');
-        
-        // 🔥 EL CANDADO SALVAVIDAS: Solo selecciona las de esta pestaña Y de la fecha que estás mirando
         const coincideModo = origen === this.modoVista;
         const coincideFecha = r.fecha_despacho === this.filtroFecha;
-        
         return coincideModo && coincideFecha;
       });
 
@@ -879,7 +816,6 @@ export class ProgramacionRutasComponent implements OnInit, OnDestroy {
   }
 
   async eliminarEntregaParcial(entrega: any) {
-
     this.isLoading = true;
     try {
       const { error: errDelete } = await this.supabase.from('entregas_parciales').delete().eq('id', entrega.id);

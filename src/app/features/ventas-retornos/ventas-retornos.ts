@@ -183,8 +183,6 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
   actualizarGrafico() {
     if (!this.comparativaChartRef) return;
 
-    // AHORA BASAMOS LA GRÁFICA EN `this.registros` (que es el arreglo ya filtrado)
-    // en lugar de usar `this.registrosBase` o un arreglo estático.
     const sumVentas = [
       this.registros.reduce((acc, r) => acc + r.v05, 0),
       this.registros.reduce((acc, r) => acc + r.v10, 0),
@@ -340,7 +338,8 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
 
     worksheet.addImage(logoId, { tl: { col: 0.5, row: 0.5 }, ext: { width: 140, height: 50 } });
 
-    worksheet.mergeCells('D1:T2');
+    // Rango combinado hasta la nueva columna U
+    worksheet.mergeCells('D1:U2');
     const titleCell = worksheet.getCell('D1');
     const subtituloFiltro = this.terminoBusqueda ? ` - FILTRO: "${this.terminoBusqueda.toUpperCase()}"` : '';
     titleCell.value = `LISTA MAESTRA DE GLP ENVASADO (${this.fechaInicio} al ${this.fechaFin})${subtituloFiltro}`;
@@ -360,43 +359,87 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
     const headerFont: Partial<ExcelJS.Font> = { name: 'Arial', bold: true, size: 10 };
     const borderStyle: Partial<ExcelJS.Borders> = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
-    worksheet.mergeCells('A7:G7'); worksheet.getCell('A7').value = 'DATOS GENERALES';
-    worksheet.mergeCells('H7:K7'); worksheet.getCell('H7').value = 'PROGRAMADO'; worksheet.getCell('H7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
-    worksheet.mergeCells('L7:O7'); worksheet.getCell('L7').value = 'VENTA REAL'; worksheet.getCell('L7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
-    worksheet.mergeCells('P7:S7'); worksheet.getCell('P7').value = 'RETORNO / MERMA'; worksheet.getCell('P7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E6' } };
-    worksheet.getCell('T7').value = 'OBSERVACIONES';
+    // Añadimos una celda extra a "DATOS GENERALES" (A7:H7) porque insertamos la columna ESTADO
+    worksheet.mergeCells('A7:H7'); worksheet.getCell('A7').value = 'DATOS GENERALES';
+    worksheet.mergeCells('I7:L7'); worksheet.getCell('I7').value = 'PROGRAMADO'; worksheet.getCell('I7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+    worksheet.mergeCells('M7:P7'); worksheet.getCell('M7').value = 'VENTA REAL'; worksheet.getCell('M7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
+    worksheet.mergeCells('Q7:T7'); worksheet.getCell('Q7').value = 'RETORNO / MERMA'; worksheet.getCell('Q7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E6' } };
+    worksheet.getCell('U7').value = 'OBSERVACIONES';
 
     worksheet.getRow(7).eachCell(cell => { cell.font = headerFont; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borderStyle; });
 
-    worksheet.getRow(8).values = ['FECHA', 'DISTRIBUIDOR / CLIENTE', 'DISTRITO', 'CONDUCTOR', 'PROMOTOR', 'PLACA', 'CONDICION', '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', 'DETALLE'];
+    worksheet.getRow(8).values = [
+      'FECHA', 'DISTRIBUIDOR / CLIENTE', 'DISTRITO', 'CONDUCTOR', 'PROMOTOR', 'PLACA', 'CONDICION', 'ESTADO', 
+      '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', 'DETALLE'
+    ];
     worksheet.getRow(8).eachCell(cell => { cell.fill = headerFill; cell.font = headerFont; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borderStyle; });
 
-    worksheet.columns = [{ width: 12 }, { width: 30 }, { width: 20 }, { width: 20 }, { width: 15 }, { width: 12 }, { width: 12 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, { width: 35 }];
+    // Ajuste de columnas con la nueva de ESTADO
+    worksheet.columns = [
+      { width: 12 }, { width: 30 }, { width: 20 }, { width: 20 }, { width: 15 }, 
+      { width: 12 }, { width: 12 }, { width: 15 }, // <-- Columna ESTADO en la posición 8
+      { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
+      { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
+      { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
+      { width: 35 }
+    ];
 
     this.registros.forEach(reg => {
-      const row = worksheet.addRow([reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, reg.p05, reg.p10, reg.p15, reg.p45, reg.v05, reg.v10, reg.v15, reg.v45, reg.m05, reg.m10, reg.m15, reg.m45, reg.obs]);
-      row.eachCell(cell => { cell.border = borderStyle; cell.alignment = { vertical: 'middle' }; });
+      // Función para formatear visualmente el texto del estado en el Excel
+      let textoEstado = reg.estado;
+      if (reg.estado === 'PENDIENTE') textoEstado = 'EN LISTA';
+      if (reg.estado === 'PROXIMO') textoEstado = 'PROXIMO';
+      if (reg.estado === 'EN_PROCESO') textoEstado = 'ATENDIENDO';
+
+      const row = worksheet.addRow([
+        reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, textoEstado, 
+        reg.p05, reg.p10, reg.p15, reg.p45, 
+        reg.v05, reg.v10, reg.v15, reg.v45, 
+        reg.m05, reg.m10, reg.m15, reg.m45, 
+        reg.obs
+      ]);
+      
+      row.eachCell((cell, colNumber) => {
+        cell.border = borderStyle;
+        cell.alignment = { vertical: 'middle', horizontal: colNumber >= 8 && colNumber <= 20 ? 'center' : 'left' };
+        
+        // Pintar la celda del estado según su valor
+        if (colNumber === 8) {
+          cell.font = { bold: true };
+          if (reg.estado === 'COMPLETADO') cell.font.color = { argb: 'FF16A34A' };
+          if (reg.estado === 'EN_PROCESO') cell.font.color = { argb: 'FFD97706' };
+          if (reg.estado === 'PROXIMO') cell.font.color = { argb: 'FF7E22CE' };
+          if (reg.estado === 'PENDIENTE' || reg.estado === 'ANULADO') cell.font.color = { argb: 'FFDC2626' };
+        }
+      });
     });
 
-    if (this.contenedorGraficoVRRef) {
+    // ==============================================================
+    // NUEVA EXPORTACIÓN DE IMAGEN: Nítida y directa desde Chart.js
+    // ==============================================================
+    if (this.chartInstance) {
       try {
-        const canvas = await html2canvas(this.contenedorGraficoVRRef.nativeElement, { scale: 2, backgroundColor: '#ffffff' });
-        const graficaBase64 = canvas.toDataURL('image/png');
+        // Obtenemos la imagen limpia directo del renderizador interno del Canvas
+        const graficaBase64 = this.chartInstance.toBase64Image('image/png', 1); 
+        
         const chartImgId = workbook.addImage({ base64: graficaBase64, extension: 'png' });
-        worksheet.addImage(chartImgId, { tl: { col: 1, row: worksheet.rowCount + 2 }, ext: { width: 600, height: 350 } });
+        
+        // Insertamos con proporción apaisada
+        worksheet.addImage(chartImgId, { 
+          tl: { col: 1, row: worksheet.rowCount + 2 }, 
+          ext: { width: 800, height: 350 } 
+        });
       } catch (e) {
-        console.error('Error al capturar la gráfica', e);
+        console.error('Error al inyectar la gráfica de Chart.js', e);
       }
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
     let nombreFiltro = 'GENERAL';
     if (this.terminoBusqueda) {
-      // Limpiamos el texto para quitar espacios o caracteres prohibidos en nombres de archivos Windows
       nombreFiltro = this.terminoBusqueda.trim().replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
     }
     
-    // Genera un nombre como: GO-F-007_Ventas_BBU_840_2026-10-01_al_2026-10-31.xlsx
     const nombreArchivo = `GO-F-007_Ventas_${nombreFiltro}_${this.fechaInicio}_al_${this.fechaFin}.xlsx`;
     saveAs(new Blob([buffer]), nombreArchivo);
   }
