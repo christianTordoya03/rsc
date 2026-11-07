@@ -125,7 +125,7 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
         p05: d.p05 || 0, p10: d.p10 || 0, p15: d.p15 || 0, p45: d.p45 || 0,
         v05: d.v05 || 0, v10: d.v10 || 0, v15: d.v15 || 0, v45: d.v45 || 0,
         m05: d.m05 || 0, m10: d.m10 || 0, m15: d.m15 || 0, m45: d.m45 || 0, 
-        obs: d.observaciones || ''
+        obs: d.observacion || ''
       }));
 
       this.aplicarFiltros();
@@ -300,7 +300,7 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
         m05: v.ret_05, m10: v.ret_10, m15: v.ret_15, m45: v.ret_45,
         venta_real: totalVendido, 
         merma: totalMerma, 
-        observaciones: v.observaciones,
+        observacion: v.observaciones,
         estado: 'COMPLETADO' 
       };
 
@@ -330,6 +330,12 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async exportarExcel() {
+    const registrosOrdenados = [...this.registros].sort((a, b) => {
+      if (a.placa < b.placa) return -1;
+      if (a.placa > b.placa) return 1;
+      return 0;
+    });
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Lista Maestra');
 
@@ -338,8 +344,8 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
 
     worksheet.addImage(logoId, { tl: { col: 0.5, row: 0.5 }, ext: { width: 140, height: 50 } });
 
-    // Rango combinado hasta la nueva columna U
-    worksheet.mergeCells('D1:U2');
+    // CORRECCIÓN: Rango combinado hasta la columna S (ya no hasta la U)
+    worksheet.mergeCells('D1:S2');
     const titleCell = worksheet.getCell('D1');
     const subtituloFiltro = this.terminoBusqueda ? ` - FILTRO: "${this.terminoBusqueda.toUpperCase()}"` : '';
     titleCell.value = `LISTA MAESTRA DE GLP ENVASADO (${this.fechaInicio} al ${this.fechaFin})${subtituloFiltro}`;
@@ -359,40 +365,62 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
     const headerFont: Partial<ExcelJS.Font> = { name: 'Arial', bold: true, size: 10 };
     const borderStyle: Partial<ExcelJS.Borders> = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
-    // Añadimos una celda extra a "DATOS GENERALES" (A7:H7) porque insertamos la columna ESTADO
-    worksheet.mergeCells('A7:H7'); worksheet.getCell('A7').value = 'DATOS GENERALES';
-    worksheet.mergeCells('I7:L7'); worksheet.getCell('I7').value = 'PROGRAMADO'; worksheet.getCell('I7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
-    worksheet.mergeCells('M7:P7'); worksheet.getCell('M7').value = 'VENTA REAL'; worksheet.getCell('M7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E7FF' } };
-    worksheet.mergeCells('Q7:T7'); worksheet.getCell('Q7').value = 'RETORNO / MERMA'; worksheet.getCell('Q7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE4E6' } };
-    worksheet.getCell('U7').value = 'OBSERVACIONES';
+    // COLORES EXACTOS DEL EXCEL
+    const colorGeneral = 'FFE6F2FF'; // Azul muy claro
+    const colorVenta = 'FFDCE6F1';   // Celeste / Tema 6
+    const colorRetorno = 'FFFF0066'; // Rojo Carmesí
 
-    worksheet.getRow(7).eachCell(cell => { cell.font = headerFont; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borderStyle; });
+    worksheet.mergeCells('A7:F7'); worksheet.getCell('A7').value = 'DATOS GENERALES';
+    // PROGRAMADO (G7:J7)
+    worksheet.mergeCells('G7:J7'); worksheet.getCell('G7').value = 'PROGRAMADO'; worksheet.getCell('G7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
+    // VENTA REAL (K7:N7)
+    worksheet.mergeCells('K7:N7'); worksheet.getCell('K7').value = 'VENTA REAL'; worksheet.getCell('K7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorVenta } };
+    // RETORNO (O7:R7)
+    worksheet.mergeCells('O7:R7'); worksheet.getCell('O7').value = 'RETORNO'; worksheet.getCell('O7').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorRetorno } };
+    worksheet.getCell('O7').font = { name: 'Arial', bold: true, size: 10, color: { argb: 'FFFFFFFF' } }; // Letra blanca
+    // OBSERVACIONES (S7)
+    worksheet.getCell('S7').value = 'OBSERVACIONES';
 
+    worksheet.getRow(7).eachCell(cell => { cell.font = cell.font || headerFont; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borderStyle; });
+
+    // NUEVO ORDEN DE COLUMNAS (Coincide exacto con la imagen)
     worksheet.getRow(8).values = [
-      'FECHA', 'DISTRIBUIDOR / CLIENTE', 'DISTRITO', 'CONDUCTOR', 'PROMOTOR', 'PLACA', 'CONDICION', 'ESTADO', 
+      'FECHA', 'PLACA', 'DISTRIBUIDOR / CLIENTE', 'DISTRITO', 'CONDICION', 'ESTADO', 
       '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', '05KG', '10KG', '15KG', '45KG', 'DETALLE'
     ];
-    worksheet.getRow(8).eachCell(cell => { cell.fill = headerFill; cell.font = headerFont; cell.alignment = { horizontal: 'center', vertical: 'middle' }; cell.border = borderStyle; });
+    
+    worksheet.getRow(8).eachCell((cell, colNumber) => { 
+      let bgColor = colorGeneral;
+      let fontColor = 'FF000000'; // Negro por defecto
+      if (colNumber >= 11 && colNumber <= 14) bgColor = colorVenta;
+      if (colNumber >= 15 && colNumber <= 18) {
+        bgColor = colorRetorno;
+        fontColor = 'FFFFFFFF'; // Blanco
+      }
+      
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+      cell.font = { name: 'Arial', bold: true, size: 10, color: { argb: fontColor } }; 
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }; 
+      cell.border = borderStyle; 
+    });
 
-    // Ajuste de columnas con la nueva de ESTADO
     worksheet.columns = [
-      { width: 12 }, { width: 30 }, { width: 20 }, { width: 20 }, { width: 15 }, 
-      { width: 12 }, { width: 12 }, { width: 15 }, // <-- Columna ESTADO en la posición 8
+      { width: 12 }, { width: 12 }, { width: 35 }, { width: 20 }, { width: 15 }, { width: 15 }, 
       { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
       { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
       { width: 8 }, { width: 8 }, { width: 8 }, { width: 8 }, 
       { width: 35 }
     ];
-
-    this.registros.forEach(reg => {
-      // Función para formatear visualmente el texto del estado en el Excel
+    
+    registrosOrdenados.forEach(reg => {
       let textoEstado = reg.estado;
       if (reg.estado === 'PENDIENTE') textoEstado = 'EN LISTA';
       if (reg.estado === 'PROXIMO') textoEstado = 'PROXIMO';
       if (reg.estado === 'EN_PROCESO') textoEstado = 'ATENDIENDO';
+      if (reg.estado === 'PENDIENTE' && (reg.p05||0) + (reg.p10||0) + (reg.p15||0) + (reg.p45||0) > 0) textoEstado = 'NO ATENDIDO';
 
       const row = worksheet.addRow([
-        reg.fecha, reg.cliente, reg.distrito, reg.conductor, '-', reg.placa, reg.condicion, textoEstado, 
+        reg.fecha, reg.placa, reg.cliente, reg.distrito, reg.condicion, textoEstado, 
         reg.p05, reg.p10, reg.p15, reg.p45, 
         reg.v05, reg.v10, reg.v15, reg.v45, 
         reg.m05, reg.m10, reg.m15, reg.m45, 
@@ -401,30 +429,35 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
       
       row.eachCell((cell, colNumber) => {
         cell.border = borderStyle;
-        cell.alignment = { vertical: 'middle', horizontal: colNumber >= 8 && colNumber <= 20 ? 'center' : 'left' };
         
-        // Pintar la celda del estado según su valor
-        if (colNumber === 8) {
+        // CORRECCIÓN ALINEACIÓN: Centrar todo excepto Cliente (3), Distrito (4) y Observaciones (19)
+        cell.alignment = { vertical: 'middle', horizontal: (colNumber === 3 || colNumber === 4 || colNumber === 19) ? 'left' : 'center' };
+        
+        // Colorear Estados (Columna 6)
+        if (colNumber === 6) {
           cell.font = { bold: true };
           if (reg.estado === 'COMPLETADO') cell.font.color = { argb: 'FF16A34A' };
           if (reg.estado === 'EN_PROCESO') cell.font.color = { argb: 'FFD97706' };
           if (reg.estado === 'PROXIMO') cell.font.color = { argb: 'FF7E22CE' };
           if (reg.estado === 'PENDIENTE' || reg.estado === 'ANULADO') cell.font.color = { argb: 'FFDC2626' };
         }
+
+        // PINTAR DE ROJO SI HAY RETORNO (Columnas de la 15 a la 18)
+        if (colNumber >= 15 && colNumber <= 18) {
+          const valor = Number(cell.value) || 0;
+          if (valor > 0) {
+            cell.font = { bold: true, color: { argb: 'FFCC0000' } };
+          }
+        }
       });
     });
 
-    // ==============================================================
-    // NUEVA EXPORTACIÓN DE IMAGEN: Nítida y directa desde Chart.js
-    // ==============================================================
     if (this.chartInstance) {
       try {
-        // Obtenemos la imagen limpia directo del renderizador interno del Canvas
         const graficaBase64 = this.chartInstance.toBase64Image('image/png', 1); 
         
         const chartImgId = workbook.addImage({ base64: graficaBase64, extension: 'png' });
         
-        // Insertamos con proporción apaisada
         worksheet.addImage(chartImgId, { 
           tl: { col: 1, row: worksheet.rowCount + 2 }, 
           ext: { width: 800, height: 350 } 
