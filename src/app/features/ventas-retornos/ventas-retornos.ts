@@ -417,6 +417,7 @@ export class VentasRetornos implements OnInit, AfterViewInit, OnDestroy {
       if (reg.estado === 'PENDIENTE') textoEstado = 'EN LISTA';
       if (reg.estado === 'PROXIMO') textoEstado = 'PROXIMO';
       if (reg.estado === 'EN_PROCESO') textoEstado = 'ATENDIENDO';
+      if (reg.estado === 'COMPLETADO') textoEstado = 'ATENDIDO';
       if (reg.estado === 'PENDIENTE' && (reg.p05||0) + (reg.p10||0) + (reg.p15||0) + (reg.p45||0) > 0) textoEstado = 'NO ATENDIDO';
 
       const row = worksheet.addRow([

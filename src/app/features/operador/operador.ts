@@ -273,8 +273,15 @@ export class OperadorComponent implements OnInit, OnDestroy {
 
   async registrarDespacho() {
     if (this.despachoForm.invalid) return this.despachoForm.markAllAsTouched();
-    this.isLoading = true;
+    
+    // 👇 NUEVA VALIDACIÓN: Observación obligatoria si hay mermas 👇
     const v = this.despachoForm.value;
+    if (this.tieneMerma && (!v.observaciones || v.observaciones.trim() === '')) {
+      this.toast.showError('Obligatorio: Escriba el motivo del retorno en Observaciones');
+      return; 
+    }
+
+    this.isLoading = true;
     const r = this.rutaActual;
     let urlFoto = null; 
 
